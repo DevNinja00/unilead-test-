@@ -12,14 +12,18 @@ export default function SignUp() {
   const navigate = useNavigate();
   const { setStudent, setSession } = useApp();
   const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string; form?: string }>({});
+  const [errors, setErrors] = useState<{ name?: string; username?: string; email?: string; password?: string; form?: string }>({});
   const [loading, setLoading] = useState(false);
 
   function validate() {
     const next: typeof errors = {};
     if (!name.trim()) next.name = 'Please enter your name.';
+    if (!username.trim()) next.username = 'Please enter a username.';
+    else if (username.length < 3) next.username = 'Username must be at least 3 characters.';
+    else if (!/^[a-zA-Z0-9_]+$/.test(username)) next.username = 'Only letters, numbers, and underscores allowed.';
     if (!email.trim()) next.email = 'Please enter your email.';
     else if (!/^\S+@\S+\.\S+$/.test(email)) next.email = 'Enter a valid email address.';
     if (password.length < 8) next.password = 'Password must be at least 8 characters.';
@@ -36,6 +40,7 @@ export default function SignUp() {
       // 1. Sign up via the real backend endpoint.
       const session = await signUp({
         name: name.trim(),
+        username: username.trim(),
         email: email.trim(),
         password,
       });
@@ -81,6 +86,13 @@ export default function SignUp() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               error={errors.name}
+            />
+            <Input
+              label="Username"
+              placeholder="e.g. mariam_h"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              error={errors.username}
             />
             <Input
               label="Email"

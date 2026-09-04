@@ -18,12 +18,15 @@ version:
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 from fastapi import Request
 
 from ..schemas.simulation import SimulationResult
 from . import ai_education_bridge
+
+_log = logging.getLogger("unilead.simulation")
 
 if TYPE_CHECKING:
     pass
@@ -66,6 +69,7 @@ def _diagnose_misconception(telemetry):
         m = diagnose_misconception(telemetry)
         return m.name if m and m.name != "NONE" else None
     except Exception:
+        _log.debug("Could not diagnose misconception", exc_info=True)
         return None
 
 
@@ -117,7 +121,7 @@ def run_simulation(request_data, http_request: Request, student_id: str) -> dict
             manager=gateway.student_manager,
         )
     except Exception:
-        pass  # Mastery engine failure should never break the simulation response
+        _log.debug("Mastery engine failure should never break the simulation response", exc_info=True)
 
     # 6) Sync state back to Compass student_state
     ai_education_bridge.sync_compass_state_from_manager(gateway)
@@ -173,7 +177,7 @@ def run_simulation(request_data, http_request: Request, student_id: str) -> dict
         finally:
             db.close()
     except Exception:
-        pass  # DB persistence is best-effort — never break the route
+        _log.warning("Failed to persist simulation run for student=%s", student_id, exc_info=True)
 
     # 7) Detect misconception (only meaningful on FAIL)
     misconception = None if passed else _diagnose_misconception(telemetry)

@@ -11,7 +11,7 @@ inside a ``with db:`` block (or use ``Depends(get_db)`` in routers).
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy import select
@@ -26,10 +26,11 @@ def create_user(
     db: Session,
     *,
     email: str,
+    username: str,
     name: str,
     password_hash: Optional[str] = None,
 ) -> models.User:
-    user = models.User(email=email, name=name, password_hash=password_hash)
+    user = models.User(email=email, username=username, name=name, password_hash=password_hash)
     db.add(user)
     db.flush()
     return user
@@ -37,6 +38,10 @@ def create_user(
 
 def get_user_by_email(db: Session, email: str) -> Optional[models.User]:
     return db.query(models.User).filter(models.User.email == email).first()
+
+
+def get_user_by_username(db: Session, username: str) -> Optional[models.User]:
+    return db.query(models.User).filter(models.User.username == username).first()
 
 
 def get_user_by_id(db: Session, user_id: int) -> Optional[models.User]:
@@ -95,6 +100,10 @@ def get_competencies(db: Session, student_id: str) -> list[models.CompetencySnap
         .order_by(models.CompetencySnapshot.id)
         .all()
     )
+
+
+def get_all_competencies(db: Session) -> list[models.CompetencySnapshot]:
+    return db.query(models.CompetencySnapshot).order_by(models.CompetencySnapshot.id).all()
 
 
 def upsert_competency(
@@ -395,7 +404,7 @@ def append_evidence_event(
         detail=detail,
         result=result,
         competency_id=competency_id,
-        timestamp=timestamp or datetime.utcnow(),
+        timestamp=timestamp or datetime.now(timezone.utc).replace(tzinfo=None),
     )
     db.add(ev)
     db.flush()

@@ -248,12 +248,14 @@ export interface AuthSession {
   tokenType: 'bearer';
   userId: number;
   email: string;
+  username: string;
   name: string;
   studentId: string;
 }
 
 export interface SignUpRequest {
   name: string;
+  username: string;
   email: string;
   password: string;
 }
@@ -266,6 +268,7 @@ export interface LoginRequest {
 export interface MeResponse {
   userId: number;
   email: string;
+  username: string;
   name: string;
   studentId: string;
   studentDisplayName: string;

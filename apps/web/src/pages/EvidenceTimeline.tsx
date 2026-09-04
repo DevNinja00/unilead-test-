@@ -4,7 +4,7 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { LoadingState, ErrorState, EmptyState } from '../components/ui/StateViews';
-import { DEFAULT_STUDENT_ID, getEvidenceTimeline } from '../data/mockApi';
+import { getMyEvidenceTimeline } from '../data/mockApi';
 import type { EvidenceEvent } from '../types';
 import './InstructorStudentDetail.css';
 
@@ -66,7 +66,7 @@ export default function EvidenceTimeline() {
   async function load() {
     setPhase('loading');
     try {
-      const evs = await getEvidenceTimeline(DEFAULT_STUDENT_ID);
+      const evs = await getMyEvidenceTimeline();
       setEvents(evs);
       setPhase(evs.length === 0 ? 'empty' : 'success');
     } catch (err) {

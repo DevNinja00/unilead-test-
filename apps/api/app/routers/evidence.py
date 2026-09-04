@@ -6,8 +6,8 @@ student-facing route, and from the URL for the instructor-facing route.
 
 from fastapi import APIRouter, Depends
 
-from ..auth.dependencies import get_current_student
-from ..db.models import Student
+from ..auth.dependencies import get_current_instructor, get_current_student
+from ..db.models import Student, User
 from ..schemas.instructor import EvidenceEvent
 from ..services import evidence_service
 
@@ -18,3 +18,12 @@ router = APIRouter(prefix="/api/evidence", tags=["evidence"])
 def get_my_timeline(current_student: Student = Depends(get_current_student)) -> list[dict]:
     """Return the current student's evidence timeline, newest-first."""
     return evidence_service.get_timeline(current_student.student_id)
+
+
+@router.get("/{student_id}/timeline", response_model=list[EvidenceEvent])
+def get_student_timeline(
+    student_id: str,
+    current_user: User = Depends(get_current_instructor),
+) -> list[dict]:
+    """Instructor view: return any student's evidence timeline by student_id."""
+    return evidence_service.get_timeline(student_id)

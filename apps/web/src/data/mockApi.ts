@@ -537,6 +537,11 @@ export async function getInstructorStudentDetail(
 
 // ---- Evidence Timeline (NEW) -----------------------------------------------
 
+export async function getMyEvidenceTimeline(): Promise<EvidenceEvent[]> {
+  const r = await apiGet<ApiEvidenceEvent[]>('/evidence/me/timeline');
+  return r.map(mapEvidenceEvent);
+}
+
 export async function getEvidenceTimeline(studentId: string): Promise<EvidenceEvent[]> {
   const r = await apiGet<ApiEvidenceEvent[]>(`/evidence/${studentId}/timeline`);
   return r.map(mapEvidenceEvent);
@@ -556,6 +561,7 @@ interface ApiAuthResponse {
   token_type: string;
   user_id: number;
   email: string;
+  username: string;
   name: string;
   student_id: string;
 }
@@ -568,6 +574,7 @@ function mapAuthResponse(r: ApiAuthResponse): AuthSession {
     tokenType: r.token_type as 'bearer',
     userId: r.user_id,
     email: r.email,
+    username: r.username,
     name: r.name,
     studentId: r.student_id,
   };
@@ -576,6 +583,7 @@ function mapAuthResponse(r: ApiAuthResponse): AuthSession {
 export async function signUp(req: SignUpRequest): Promise<AuthSession> {
   const r = await apiPost<ApiAuthResponse>('/auth/signup', {
     name: req.name,
+    username: req.username,
     email: req.email,
     password: req.password,
   });
@@ -595,6 +603,7 @@ export async function getMe(): Promise<MeResponse> {
   return {
     userId: r.user_id,
     email: r.email,
+    username: r.username,
     name: r.name,
     studentId: r.student_id,
     studentDisplayName: r.student_display_name,
@@ -604,6 +613,7 @@ export async function getMe(): Promise<MeResponse> {
 interface ApiMeResponse {
   user_id: number;
   email: string;
+  username: string;
   name: string;
   student_id: string;
   student_display_name: string;

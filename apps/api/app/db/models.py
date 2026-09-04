@@ -38,7 +38,8 @@ from .database import Base
 
 def _utcnow() -> datetime:
     """Timezone-naive UTC now — matches SQLite's default datetime format."""
-    return datetime.utcnow()
+    from datetime import timezone
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class User(Base):
@@ -48,6 +49,7 @@ class User(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+    username: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     password_hash: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     # nullable so seeded demo accounts (without passwords) can exist for read-only views

@@ -7,6 +7,7 @@ pass the current user's ``student_id`` (resolved from the JWT via
 
 from __future__ import annotations
 
+import collections
 import copy
 from typing import Optional
 
@@ -167,9 +168,13 @@ def list_students() -> list[dict]:
     db = SessionLocal()
     try:
         students = crud.list_all_students(db)
+        all_comps = crud.get_all_competencies(db)
+        comps_by_student: dict[str, list] = collections.defaultdict(list)
+        for c in all_comps:
+            comps_by_student[c.student_id].append(c)
         result = []
         for s in students:
-            comps = crud.get_competencies(db, s.student_id)
+            comps = comps_by_student.get(s.student_id, [])
             result.append(
                 {
                     "student_id": s.student_id,
@@ -227,8 +232,9 @@ def get_aggregate_by_competency() -> list[dict]:
         all_students = crud.list_all_students(db)
         if not all_students:
             return []
-        # Build a stable competency list from INITIAL_COMPETENCIES — every
-        # student has the same 5 MEC271 competencies (seeded on signup).
+        all_comps = crud.get_all_competencies(db)
+        # Index by (student_id, competency_id)
+        comp_lookup = {(c.student_id, c.competency_id): c for c in all_comps}
         rows = []
         for c in INITIAL_COMPETENCIES:
             row = {
@@ -240,10 +246,7 @@ def get_aggregate_by_competency() -> list[dict]:
                 "not_started": 0,
             }
             for s in all_students:
-                sc = next(
-                    (x for x in crud.get_competencies(db, s.student_id) if x.competency_id == c["id"]),
-                    None,
-                )
+                sc = comp_lookup.get((s.student_id, c["id"]))
                 if sc is None:
                     continue
                 if sc.status in row:

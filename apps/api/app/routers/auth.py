@@ -9,14 +9,18 @@ Signup flow:
   6. Return JWT + student_id
 
 Login flow:
-  1. Find user by email (404 if not found)
-  2. Verify password (401 if wrong)
+  1. Find user by email
+  2. Verify password
   3. Return JWT + student_id
 """
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+import logging
+import time
+from collections import defaultdict
+
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from ..auth.dependencies import get_current_user
@@ -27,6 +31,28 @@ from ..schemas.auth import AuthResponse, LoginRequest, MeResponse, SignUpRequest
 from ..services.mock_data import INITIAL_COMPETENCIES
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+_log = logging.getLogger("unilead.auth")
+
+# --- Simple in-memory rate limiter for login (per-IP, 5 attempts / 60s) -----
+_login_attempts: dict[str, list[float]] = defaultdict(list)
+_LOGIN_MAX_ATTEMPTS = 5
+_LOGIN_WINDOW_SECONDS = 60
+
+
+def _check_login_rate_limit(ip: str) -> None:
+    now = time.monotonic()
+    _login_attempts[ip] = [t for t in _login_attempts[ip] if now - t < _LOGIN_WINDOW_SECONDS]
+    if len(_login_attempts[ip]) >= _LOGIN_MAX_ATTEMPTS:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many login attempts. Please try again later.",
+        )
+    _login_attempts[ip].append(now)
+
+
+def _record_login_attempt(ip: str) -> None:
+    _login_attempts[ip].append(time.monotonic())
 
 # --- Helpers ---------------------------------------------------------------
 
@@ -61,16 +87,24 @@ def signup(req: SignUpRequest, db: Session = Depends(get_db)) -> dict:
             detail="An account with that email already exists.",
         )
 
-    # 2. Create user
+    # 2. Username unique?
+    if crud.get_user_by_username(db, req.username) is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="That username is already taken.",
+        )
+
+    # 3. Create user
     user = crud.create_user(
         db,
         email=req.email,
+        username=req.username,
         name=req.name,
         password_hash=hash_password(req.password),
     )
     db.flush()
 
-    # 3. Create student record linked to this user
+    # 4. Create student record linked to this user
     student_id = _student_id_for_user(user.id)
     crud.create_student(
         db,
@@ -79,37 +113,39 @@ def signup(req: SignUpRequest, db: Session = Depends(get_db)) -> dict:
         display_name=req.name,
     )
 
-    # 4. Seed initial competencies
+    # 5. Seed initial competencies
     _seed_initial_competencies(db, student_id)
 
     db.commit()
 
-    # 5. Issue JWT
+    # 6. Issue JWT
     token = create_access_token(subject=str(user.id))
     return {
         "access_token": token,
         "token_type": "bearer",
         "user_id": user.id,
         "email": user.email,
+        "username": user.username,
         "name": user.name,
         "student_id": student_id,
     }
 
 
 @router.post("/login", response_model=AuthResponse)
-def login(req: LoginRequest, db: Session = Depends(get_db)) -> dict:
+def login(req: LoginRequest, request: Request, db: Session = Depends(get_db)) -> dict:
+    ip = request.client.host if request.client else "unknown"
+    _check_login_rate_limit(ip)
+
     user = crud.get_user_by_email(db, req.email)
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No account found with that email.",
-        )
-    if not verify_password(req.password, user.password_hash):
+    if user is None or not verify_password(req.password, user.password_hash):
+        _log.warning("Failed login attempt for email=%s from ip=%s", req.email, ip)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect password.",
+            detail="Invalid email or password.",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    _record_login_attempt(ip)
 
     # Find the student record linked to this user.
     students = crud.get_students_by_user_id(db, user.id)
@@ -125,6 +161,7 @@ def login(req: LoginRequest, db: Session = Depends(get_db)) -> dict:
         "token_type": "bearer",
         "user_id": user.id,
         "email": user.email,
+        "username": user.username,
         "name": user.name,
         "student_id": students[0].student_id,
     }
@@ -142,6 +179,7 @@ def me(current_user: User = Depends(get_current_user), db: Session = Depends(get
     return {
         "user_id": current_user.id,
         "email": current_user.email,
+        "username": current_user.username,
         "name": current_user.name,
         "student_id": s.student_id,
         "student_display_name": s.display_name,

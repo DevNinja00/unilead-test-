@@ -2,7 +2,11 @@
 for a specific student.
 """
 
+import logging
+
 from .mock_data import COURSE_CODE, COURSE_TITLE
+
+_log = logging.getLogger("unilead.onboarding")
 
 
 def submit_onboarding(answers: dict, student_id: str) -> dict:
@@ -23,5 +27,5 @@ def submit_onboarding(answers: dict, student_id: str) -> dict:
         finally:
             db.close()
     except Exception:
-        pass  # DB persistence is best-effort — never break the route
+        _log.warning("Failed to persist onboarding for student=%s", student_id, exc_info=True)
     return {"success": True, "course_code": COURSE_CODE, "course_title": COURSE_TITLE}

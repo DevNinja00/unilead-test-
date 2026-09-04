@@ -19,9 +19,12 @@ and transfer do.)
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, Optional
 
 from fastapi import Request
+
+_log = logging.getLogger("unilead.manager_pool")
 
 from ai_education import (
     AICoachOrchestrator,
@@ -156,8 +159,7 @@ def _replay_evidence_from_db(
         finally:
             db.close()
     except Exception:
-        # Replay is best-effort — never break the request
-        pass
+        _log.warning("Failed to replay evidence from DB for student=%s", student_id, exc_info=True)
 
 
 def clear_manager_from_pool(request: Request, student_id: str) -> None:

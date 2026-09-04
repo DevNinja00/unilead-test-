@@ -15,10 +15,14 @@ After computing the response, the plan is persisted to the DB
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import HTTPException, Request
 
 from ..schemas.remediation import RemediationPlanResponse
 from . import ai_education_bridge
+
+_log = logging.getLogger("unilead.remediation")
 
 
 def _persist_plan(*, competency_id, plan, summary, conceptual_focus, guided_question, student_id) -> None:
@@ -44,7 +48,7 @@ def _persist_plan(*, competency_id, plan, summary, conceptual_focus, guided_ques
         finally:
             db.close()
     except Exception:
-        pass  # DB persistence is best-effort — never break the route
+        _log.warning("Failed to persist remediation plan for student=%s", student_id, exc_info=True)
 
 
 def build_plan(competency_id: str, http_request: Request, student_id: str) -> dict:

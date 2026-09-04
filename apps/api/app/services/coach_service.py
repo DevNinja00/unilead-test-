@@ -13,6 +13,7 @@ provider — the orchestrator already does this internally via
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 from fastapi import Request
@@ -20,6 +21,8 @@ from fastapi import Request
 from ..schemas.coach import CoachResponse
 from . import ai_education_bridge, student_state
 from .mock_data import COACH_SCRIPT
+
+_log = logging.getLogger("unilead.coach")
 
 if TYPE_CHECKING:
     from ai_education.coach.orchestrator import AICoachOrchestrator
@@ -82,6 +85,7 @@ async def process_turn(request_data, http_request: Request, student_id: str) -> 
     except Exception:
         # Fallback: cycle through the original script so the UI keeps working
         # even if the LLM provider is unavailable mid-conversation.
+        _log.warning("Coach orchestrator failed, using fallback script", exc_info=True)
         idx = _next_turn_index(student_id) - 1
         coach_message = COACH_SCRIPT[min(idx, len(COACH_SCRIPT) - 1)]
         active_mode = (mode_enum.name if mode_enum else "PRACTICE")
@@ -92,7 +96,7 @@ async def process_turn(request_data, http_request: Request, student_id: str) -> 
     try:
         scaffolding = gateway.scaffolding_level().name
     except Exception:
-        pass
+        _log.debug("Could not determine scaffolding level", exc_info=True)
 
     # Determine if the active competency is now demonstrated
     from ai_education.domain.enums import CompetencyState
@@ -153,7 +157,7 @@ async def process_turn(request_data, http_request: Request, student_id: str) -> 
         finally:
             db.close()
     except Exception:
-        pass  # DB persistence is best-effort — never break the route
+        _log.warning("Failed to persist coach turn to DB for student=%s", student_id, exc_info=True)
 
     return CoachResponse(
         message=coach_message,

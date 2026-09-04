@@ -14,12 +14,15 @@ is tagged with the misconception its wrong answers most commonly indicate
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 from fastapi import Request
 
 from . import ai_education_bridge, student_state
 from .mock_data import DIAGNOSTIC_QUESTIONS
+
+_log = logging.getLogger("unilead.diagnostic")
 
 if TYPE_CHECKING:
     pass
@@ -87,8 +90,7 @@ def submit_diagnostic(answers: list[dict], http_request: Request | None = None, 
                 ai_education_bridge.get_gateway(http_request, student_id)
             )
         except Exception:
-            # Diagnostic engine failure should never break the route.
-            pass
+            _log.warning("Diagnostic engine failed; continuing without AI update", exc_info=True)
 
     # Record an evidence timeline event for the diagnostic submission.
     correct_count = sum(e["correct"] for e in per_comp.values())
@@ -136,7 +138,7 @@ def submit_diagnostic(answers: list[dict], http_request: Request | None = None, 
         finally:
             db.close()
     except Exception:
-        pass  # DB persistence is best-effort — never break the route
+        _log.warning("Failed to persist diagnostic submission for student=%s", student_id, exc_info=True)
 
     # Compose the response — one entry per competency that has a question.
     results: list[dict] = []

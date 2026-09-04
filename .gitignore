@@ -108,6 +108,12 @@ out/
 .vim/
 .vscode-server/
 
+# ---- Databases ----
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
 # ---- Misc tooling ----
 *.log
 logs/

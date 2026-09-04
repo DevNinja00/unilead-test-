@@ -15,12 +15,15 @@ never both.
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 from fastapi import Request
 
 from . import student_state
 from .mock_data import INITIAL_COMPETENCIES
+
+_log = logging.getLogger("unilead.ai_education_bridge")
 
 if TYPE_CHECKING:
     from ai_education.api.router import APIGateway
@@ -197,7 +200,7 @@ def sync_compass_state_from_manager(gateway: "APIGateway", student_id: str | Non
         finally:
             db.close()
     except Exception:
-        pass  # DB persistence is best-effort — never break the route
+        _log.warning("sync_compass_state failed", exc_info=True)
 
 
 def active_compass_competency_id(gateway: "APIGateway") -> str:

@@ -56,7 +56,7 @@ class Settings(BaseSettings):
     # --- Auth (JWT) ---
     jwt_secret: str = "change-me-in-production-please-use-a-long-random-string"
     jwt_algorithm: str = "HS256"
-    jwt_expire_minutes: int = 10080  # 7 days
+    jwt_expire_minutes: int = 1440  # 24 hours
 
     # --- LLM provider (AI Education gateway) ---
     llm_provider_type: Literal["mock", "ollama", "openai"] = "mock"

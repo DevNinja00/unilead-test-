@@ -7,6 +7,8 @@ the scenario's domain.
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import HTTPException, Request
 
 from ..schemas.transfer import (
@@ -15,6 +17,8 @@ from ..schemas.transfer import (
     TransferScenarioResponse,
 )
 from . import ai_education_bridge
+
+_log = logging.getLogger("unilead.transfer")
 
 
 # All transfer tasks currently route to the same default scenario. Students
@@ -141,7 +145,7 @@ def evaluate_response(
         finally:
             db.close()
     except Exception:
-        pass  # DB persistence is best-effort — never break the route
+        _log.warning("Failed to persist transfer evaluation for student=%s", student_id, exc_info=True)
 
     return TransferEvaluationResponse(
         competency_id=competency_id,

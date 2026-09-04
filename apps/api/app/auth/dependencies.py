@@ -96,3 +96,14 @@ def get_current_student(
             detail="No student record linked to this user.",
         )
     return students[0]
+
+
+def get_current_instructor(
+    current_user: models.User = Depends(get_current_user),
+) -> models.User:
+    """Resolve the current user as an instructor.
+
+    For this MVP all authenticated users can access instructor endpoints.
+    In production, add a role column to the User model and gate on it.
+    """
+    return current_user
