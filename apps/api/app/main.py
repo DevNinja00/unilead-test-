@@ -230,6 +230,25 @@ def health_check() -> dict:
     }
 
 
+@app.get("/healthz", tags=["health"])
+def healthz() -> dict:
+    """Kubernetes-style liveness probe."""
+    return {"status": "ok"}
+
+
+@app.get("/readyz", tags=["health"])
+def readyz() -> dict:
+    """Readiness probe — verifies DB connectivity."""
+    from sqlalchemy import text
+    from .db import SessionLocal
+    try:
+        with SessionLocal() as session:
+            session.execute(text("SELECT 1"))
+        return {"status": "ready", "database": "ok"}
+    except Exception as exc:
+        return {"status": "not_ready", "database": str(exc)}
+
+
 def main() -> None:
     """Run the server with uvicorn (reloads on source changes)."""
     import uvicorn
