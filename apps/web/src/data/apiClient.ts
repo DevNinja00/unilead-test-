@@ -5,7 +5,7 @@
 // Auth: if a JWT is stored in localStorage (under ``unilead_token``), it's
 // automatically attached to every request via the Authorization header.
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:8000/api';
 
 const TOKEN_KEY = 'unilead_token';
 

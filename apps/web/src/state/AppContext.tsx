@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
-import { createContext, useContext, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { Student, DiagnosticResult, OnboardingAnswers, JourneyFlags, AuthSession } from '../types';
+import { getMe } from '../data/mockApi';
 
 interface AppState {
   student: Student | null;
@@ -49,6 +50,37 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [onboardingAnswers, setOnboardingAnswers] = useState<OnboardingAnswers | null>(null);
   const [diagnosticResults, setDiagnosticResults] = useState<DiagnosticResult[] | null>(null);
   const [session, setSessionState] = useState<AuthSession | null>(loadSession);
+
+  // Validate the stored session against the backend on mount.
+  // If the token is expired or invalid, clear it silently.
+  useEffect(() => {
+    if (!session) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const me = await getMe();
+        if (cancelled) return;
+        // Update session with fresh data from server (especially role).
+        const updated: AuthSession = {
+          ...session,
+          name: me.name,
+          email: me.email,
+          username: me.username,
+          studentId: me.studentId,
+          role: me.role as AuthSession['role'] ?? session.role,
+        };
+        setSessionState(updated);
+        saveSession(updated);
+      } catch {
+        if (!cancelled) {
+          // Token is invalid/expired — clear session.
+          setSessionState(null);
+          saveSession(null);
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [hasCompletedLearning, setHasCompletedLearning] = useState(false);
   const [hasCompletedPractice, setHasCompletedPractice] = useState(false);

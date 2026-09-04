@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import Navbar from './components/layout/Navbar';
+import { ProtectedRoute, InstructorRoute } from './components/auth/ProtectedRoute';
 
 import SignUp from './pages/SignUp';
 import Login from './pages/Login';
@@ -48,31 +49,32 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/onboarding" element={<Onboarding />} />
 
-        <Route path="/home" element={<Home />} />
+        {/* Protected routes — require authentication */}
+        <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
 
-        <Route path="/my-learning" element={<MyLearning />} />
-        <Route path="/my-learning/diagnostic" element={<Diagnostic />} />
-        <Route path="/my-learning/diagnostic-results" element={<DiagnosticResults />} />
-        <Route path="/my-learning/learning" element={<Learning />} />
-        <Route path="/my-learning/ai-coach" element={<AICoach />} />
-        <Route path="/my-learning/practice" element={<Practice />} />
-        <Route path="/my-learning/remediation" element={<Remediation />} />
+        <Route path="/my-learning" element={<ProtectedRoute><MyLearning /></ProtectedRoute>} />
+        <Route path="/my-learning/diagnostic" element={<ProtectedRoute><Diagnostic /></ProtectedRoute>} />
+        <Route path="/my-learning/diagnostic-results" element={<ProtectedRoute><DiagnosticResults /></ProtectedRoute>} />
+        <Route path="/my-learning/learning" element={<ProtectedRoute><Learning /></ProtectedRoute>} />
+        <Route path="/my-learning/ai-coach" element={<ProtectedRoute><AICoach /></ProtectedRoute>} />
+        <Route path="/my-learning/practice" element={<ProtectedRoute><Practice /></ProtectedRoute>} />
+        <Route path="/my-learning/remediation" element={<ProtectedRoute><Remediation /></ProtectedRoute>} />
 
-        <Route path="/apply-review" element={<ApplyReview />} />
-        <Route path="/apply-review/simulation" element={<Simulation />} />
-        <Route path="/apply-review/transfer" element={<Transfer />} />
-        <Route path="/apply-review/evidence-timeline" element={<EvidenceTimeline />} />
-        <Route path="/apply-review/review" element={<Review />} />
+        <Route path="/apply-review" element={<ProtectedRoute><ApplyReview /></ProtectedRoute>} />
+        <Route path="/apply-review/simulation" element={<ProtectedRoute><Simulation /></ProtectedRoute>} />
+        <Route path="/apply-review/transfer" element={<ProtectedRoute><Transfer /></ProtectedRoute>} />
+        <Route path="/apply-review/evidence-timeline" element={<ProtectedRoute><EvidenceTimeline /></ProtectedRoute>} />
+        <Route path="/apply-review/review" element={<ProtectedRoute><Review /></ProtectedRoute>} />
 
-        <Route path="/progress" element={<ProgressHub />} />
-        <Route path="/progress/overview" element={<ProgressOverview />} />
-        <Route path="/progress/competency-profile" element={<CompetencyProfile />} />
+        <Route path="/progress" element={<ProtectedRoute><ProgressHub /></ProtectedRoute>} />
+        <Route path="/progress/overview" element={<ProtectedRoute><ProgressOverview /></ProtectedRoute>} />
+        <Route path="/progress/competency-profile" element={<ProtectedRoute><CompetencyProfile /></ProtectedRoute>} />
 
-        <Route path="/profile" element={<Profile />} />
+        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
 
-        {/* Instructor-only views */}
-        <Route path="/instructor" element={<InstructorDashboard />} />
-        <Route path="/instructor/students/:studentId" element={<InstructorStudentDetail />} />
+        {/* Instructor-only views — require auth + instructor role */}
+        <Route path="/instructor" element={<InstructorRoute><InstructorDashboard /></InstructorRoute>} />
+        <Route path="/instructor/students/:studentId" element={<InstructorRoute><InstructorStudentDetail /></InstructorRoute>} />
 
         <Route path="*" element={<Navigate to="/home" replace />} />
       </Routes>

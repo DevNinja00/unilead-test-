@@ -251,6 +251,7 @@ export interface AuthSession {
   username: string;
   name: string;
   studentId: string;
+  role: 'student' | 'instructor';
 }
 
 export interface SignUpRequest {
@@ -272,4 +273,5 @@ export interface MeResponse {
   name: string;
   studentId: string;
   studentDisplayName: string;
+  role: 'student' | 'instructor';
 }

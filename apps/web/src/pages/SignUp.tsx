@@ -118,10 +118,6 @@ export default function SignUp() {
           <p className="muted signup__alt">
             Already have an account? <Link to="/login">Log in</Link>
           </p>
-
-          <p className="muted signup__demo-hint">
-            Or try the demo: <code>mariam@student.aiu.edu.eg</code> / <code>demo1234</code>
-          </p>
         </Card>
       </div>
     </div>

@@ -43,6 +43,7 @@ class AuthResponse(BaseModel):
     username: str
     name: str
     student_id: str
+    role: str = "student"
 
 
 class MeResponse(BaseModel):
@@ -52,3 +53,4 @@ class MeResponse(BaseModel):
     name: str
     student_id: str
     student_display_name: str
+    role: str = "student"

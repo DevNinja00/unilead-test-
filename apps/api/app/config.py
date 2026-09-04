@@ -61,6 +61,9 @@ class Settings(BaseSettings):
     # --- Env flag to enforce production secret ---
     enforce_jwt_secret: bool = False
 
+    # --- Environment (production disables Swagger/ReDoc) ---
+    env: str = "development"
+
     # --- LLM provider (AI Education gateway) ---
     llm_provider_type: Literal["mock", "ollama", "openai"] = "mock"
     llm_model: Optional[str] = None

@@ -120,6 +120,8 @@ app = FastAPI(
         "is persisted to SQLite via SQLAlchemy — see the db/ package."
     ),
     version="0.3.0",
+    docs_url=None if settings.env == "production" else "/docs",
+    redoc_url=None if settings.env == "production" else "/redoc",
 )
 
 app.add_middleware(

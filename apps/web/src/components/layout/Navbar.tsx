@@ -76,14 +76,6 @@ export default function Navbar() {
           />
 
           <DropdownMenu
-            label="Instructor"
-            active={isActive('/instructor')}
-            items={[
-              { label: 'Class Dashboard', description: 'Aggregate view of all students', href: '/instructor', icon: '👨‍🏫' },
-            ]}
-          />
-
-          <DropdownMenu
             label="My Progress"
             active={isActive('/progress')}
             items={[
@@ -92,6 +84,16 @@ export default function Navbar() {
               { label: 'Competency Profile', description: 'Your mastery by skill', href: '/progress/competency-profile', icon: '🏆' },
             ]}
           />
+
+          {session?.role === 'instructor' && (
+            <DropdownMenu
+              label="Instructor"
+              active={isActive('/instructor')}
+              items={[
+                { label: 'Class Dashboard', description: 'Aggregate view of all students', href: '/instructor', icon: '👨‍🏫' },
+              ]}
+            />
+          )}
         </nav>
 
         <div className="navbar__auth">

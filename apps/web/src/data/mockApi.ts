@@ -40,9 +40,6 @@ import type {
   MeResponse,
 } from '../types';
 
-const DEFAULT_NAME = 'Mariam';
-const DEFAULT_EMAIL = 'mariam@student.aiu.edu.eg';
-
 function toFrontendStatus(status: string): CompetencyStatus {
   return status.toUpperCase() as CompetencyStatus;
 }
@@ -69,15 +66,16 @@ function mapCompetency(c: ApiCompetency): Competency {
 }
 
 export async function getStudent(): Promise<Student> {
-  const [competencies, progress] = await Promise.all([
+  const [competencies, progress, me] = await Promise.all([
     apiGet<ApiCompetency[]>('/competencies'),
     apiGet<ApiProgress>('/progress'),
+    getMe(),
   ]);
 
   return {
     id: 'student-1',
-    name: DEFAULT_NAME,
-    email: DEFAULT_EMAIL,
+    name: me.name,
+    email: me.email,
     course: { id: 'mec271', code: progress.course_code, title: progress.course_title },
     overallProgress: progress.overall_progress,
     competencies: competencies.map(mapCompetency),
@@ -547,9 +545,6 @@ export async function getEvidenceTimeline(studentId: string): Promise<EvidenceEv
   return r.map(mapEvidenceEvent);
 }
 
-// Default student id used by the Compass routes (the "current" demo student).
-export const DEFAULT_STUDENT_ID = 'api-gateway-student';
-
 // ---- Auth (NEW) ------------------------------------------------------------
 //
 // signup/login/me — JWT-based auth. The token is stored in localStorage
@@ -564,6 +559,7 @@ interface ApiAuthResponse {
   username: string;
   name: string;
   student_id: string;
+  role: string;
 }
 
 function mapAuthResponse(r: ApiAuthResponse): AuthSession {
@@ -577,6 +573,7 @@ function mapAuthResponse(r: ApiAuthResponse): AuthSession {
     username: r.username,
     name: r.name,
     studentId: r.student_id,
+    role: (r.role === 'instructor' ? 'instructor' : 'student'),
   };
 }
 
@@ -607,6 +604,7 @@ export async function getMe(): Promise<MeResponse> {
     name: r.name,
     studentId: r.student_id,
     studentDisplayName: r.student_display_name,
+    role: (r.role === 'instructor' ? 'instructor' : 'student'),
   };
 }
 
@@ -617,6 +615,7 @@ interface ApiMeResponse {
   name: string;
   student_id: string;
   student_display_name: string;
+  role: string;
 }
 
 export function logout(): void {

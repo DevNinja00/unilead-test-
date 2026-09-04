@@ -153,6 +153,7 @@ def signup(req: SignUpRequest, request: Request, db: Session = Depends(get_db)) 
         "username": user.username,
         "name": user.name,
         "student_id": student_id,
+        "role": user.role or "student",
     }
 
 
@@ -189,6 +190,7 @@ def login(req: LoginRequest, request: Request, db: Session = Depends(get_db)) ->
         "username": user.username,
         "name": user.name,
         "student_id": students[0].student_id,
+        "role": user.role or "student",
     }
 
 
@@ -208,4 +210,5 @@ def me(current_user: User = Depends(get_current_user), db: Session = Depends(get
         "name": current_user.name,
         "student_id": s.student_id,
         "student_display_name": s.display_name,
+        "role": current_user.role or "student",
     }
