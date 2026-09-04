@@ -54,6 +54,13 @@ STATE_TO_COMPASS = {
 
 # --- Public helpers -------------------------------------------------------
 
+_KNOWN_COMPASS_IDS = set(COMPASS_TO_MEC271.keys())
+
+
+def is_valid_competency_id(compass_id: str) -> bool:
+    """Check whether a competency_id is a known Compass competency."""
+    return compass_id in _KNOWN_COMPASS_IDS
+
 
 def get_gateway(request: Request, student_id: str | None = None) -> "APIGateway":
     """Return the AI Education gateway for ``student_id``.

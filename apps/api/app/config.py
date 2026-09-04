@@ -58,6 +58,9 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 1440  # 24 hours
 
+    # --- Env flag to enforce production secret ---
+    enforce_jwt_secret: bool = False
+
     # --- LLM provider (AI Education gateway) ---
     llm_provider_type: Literal["mock", "ollama", "openai"] = "mock"
     llm_model: Optional[str] = None

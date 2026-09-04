@@ -125,16 +125,13 @@ def run_simulation(request_data, http_request: Request, student_id: str) -> dict
 
     # 6) Sync state back to Compass student_state
     ai_education_bridge.sync_compass_state_from_manager(gateway)
-    # 6b) Sync the single-student state into the multi-student registry so
-    # the instructor dashboard sees fresh data.
-    from . import student_state
-    student_state.sync_default_student_snapshot()
 
     # 6c) Count attempts (now that the evidence has been recorded) and
     # append an evidence timeline event so the Evidence Timeline UI shows it.
     record = gateway.student_manager.profile.competencies.get(mec271_comp_id)
     attempt = len(record.evidence_history) if record else 1
 
+    from . import student_state
     student_state.append_evidence_event(
         student_id=student_id,
         event_type="simulation_run",

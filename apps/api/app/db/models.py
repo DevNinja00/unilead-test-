@@ -30,6 +30,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    Enum as SAEnum,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -51,6 +52,9 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
     username: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
+    role: Mapped[str] = mapped_column(String(16), nullable=False, default="student")
+    # "student" or "instructor" — gates access to instructor endpoints
+
     password_hash: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     # nullable so seeded demo accounts (without passwords) can exist for read-only views
 

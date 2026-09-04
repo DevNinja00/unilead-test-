@@ -5,10 +5,11 @@ Each logged-in student needs its own AI Education state — the
 memory. The Compass routes no longer share one global manager; instead,
 each request resolves the manager from the current user's ``student_id``.
 
-The pool is a plain dict keyed by ``student_id``. It lives on
-``app.state.ai_education_managers``. The pool is in-process — when the
-server restarts, the in-memory managers are rebuilt from the DB on next
-access (see ``load_manager_for_student``).
+The pool is a plain dict keyed by ``student_id`` with LRU eviction
+(max 200 entries). It lives on ``app.state.ai_education_managers``.
+The pool is in-process — when the server restarts, the in-memory
+managers are rebuilt from the DB on next access
+(see ``load_manager_for_student``).
 
 The DB is the source of truth for *what* the student has demonstrated.
 The manager is rebuilt from the DB by re-recording every simulation_run
@@ -20,6 +21,7 @@ and transfer do.)
 from __future__ import annotations
 
 import logging
+from collections import OrderedDict
 from typing import TYPE_CHECKING, Optional
 
 from fastapi import Request
@@ -38,6 +40,23 @@ from ai_education.llm.base import LLMProvider
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
 
+_MAX_POOL_SIZE = 200
+
+
+class _BoundedManagerPool(OrderedDict):
+    """LRU-bounded dict for the in-memory manager pool."""
+
+    def __init__(self, maxsize: int = _MAX_POOL_SIZE):
+        super().__init__()
+        self._maxsize = maxsize
+
+    def __setitem__(self, key, value):
+        if key in self:
+            self.move_to_end(key)
+        super().__setitem__(key, value)
+        if len(self) > self._maxsize:
+            self.popitem(last=False)
+
 
 def get_or_create_manager(request: Request, student_id: str) -> StudentModelManager:
     """Return the in-memory AI Education manager for ``student_id``,
@@ -45,7 +64,7 @@ def get_or_create_manager(request: Request, student_id: str) -> StudentModelMana
     """
     pool = getattr(request.app.state, "ai_education_managers", None)
     if pool is None:
-        pool = {}
+        pool = _BoundedManagerPool()
         request.app.state.ai_education_managers = pool
 
     if student_id in pool:

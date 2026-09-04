@@ -24,7 +24,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from ..auth.dependencies import get_current_user
-from ..auth.service import create_access_token, hash_password, verify_password
+from ..auth.service import create_access_token, hash_password, verify_password_timing_resistant
 from ..db import crud, get_db
 from ..db.models import User
 from ..schemas.auth import AuthResponse, LoginRequest, MeResponse, SignUpRequest
@@ -38,6 +38,11 @@ _log = logging.getLogger("unilead.auth")
 _login_attempts: dict[str, list[float]] = defaultdict(list)
 _LOGIN_MAX_ATTEMPTS = 5
 _LOGIN_WINDOW_SECONDS = 60
+
+# --- Simple in-memory rate limiter for signup (per-IP, 3 per hour) ----------
+_signup_attempts: dict[str, list[float]] = defaultdict(list)
+_SIGNUP_MAX_ATTEMPTS = 3
+_SIGNUP_WINDOW_SECONDS = 3600
 
 
 def _check_login_rate_limit(ip: str) -> None:
@@ -53,6 +58,22 @@ def _check_login_rate_limit(ip: str) -> None:
 
 def _record_login_attempt(ip: str) -> None:
     _login_attempts[ip].append(time.monotonic())
+
+
+def _check_signup_rate_limit(ip: str) -> None:
+    now = time.monotonic()
+    _signup_attempts[ip] = [t for t in _signup_attempts[ip] if now - t < _SIGNUP_WINDOW_SECONDS]
+    if len(_signup_attempts[ip]) >= _SIGNUP_MAX_ATTEMPTS:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many signup attempts. Please try again later.",
+        )
+    _signup_attempts[ip].append(now)
+
+
+def _sanitize_email(email: str) -> str:
+    """Strip non-ASCII chars from email to prevent log injection."""
+    return email.encode("ascii", "ignore").decode("ascii")
 
 # --- Helpers ---------------------------------------------------------------
 
@@ -79,19 +100,23 @@ def _seed_initial_competencies(db: Session, student_id: str) -> None:
 
 
 @router.post("/signup", response_model=AuthResponse)
-def signup(req: SignUpRequest, db: Session = Depends(get_db)) -> dict:
+def signup(req: SignUpRequest, request: Request, db: Session = Depends(get_db)) -> dict:
+    ip = request.client.host if request.client else "unknown"
+    _check_signup_rate_limit(ip)
+
     # 1. Email unique?
     if crud.get_user_by_email(db, req.email) is not None:
+        # Use generic message to prevent enumeration
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="An account with that email already exists.",
+            detail="An account with that email or username already exists.",
         )
 
     # 2. Username unique?
     if crud.get_user_by_username(db, req.username) is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="That username is already taken.",
+            detail="An account with that email or username already exists.",
         )
 
     # 3. Create user
@@ -137,8 +162,8 @@ def login(req: LoginRequest, request: Request, db: Session = Depends(get_db)) ->
     _check_login_rate_limit(ip)
 
     user = crud.get_user_by_email(db, req.email)
-    if user is None or not verify_password(req.password, user.password_hash):
-        _log.warning("Failed login attempt for email=%s from ip=%s", req.email, ip)
+    if user is None or not verify_password_timing_resistant(req.password, user.password_hash):
+        _log.warning("Failed login attempt for email=%s from ip=%s", _sanitize_email(req.email), ip)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password.",

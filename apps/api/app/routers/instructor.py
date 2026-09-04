@@ -7,7 +7,7 @@ Three endpoints:
   - ``GET /api/instructor/students/{id}``    → one student's full record + timeline
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Path
 
 from ..auth.dependencies import get_current_instructor
 from ..db.models import User
@@ -41,12 +41,15 @@ def list_students(current_user: User = Depends(get_current_instructor)) -> list[
 
 
 @router.get("/students/{student_id}", response_model=InstructorStudentDetail)
-def get_student_detail(student_id: str, current_user: User = Depends(get_current_instructor)) -> dict:
+def get_student_detail(
+    student_id: str = Path(..., max_length=64, pattern=r"^[a-zA-Z0-9_-]+$"),
+    current_user: User = Depends(get_current_instructor),
+) -> dict:
     """Return one student's full record including their evidence timeline."""
     detail = instructor_service.get_student_detail(student_id)
     if detail is None:
         raise HTTPException(
             status_code=404,
-            detail=f"No student found with id {student_id!r}",
+            detail="No student found with the given ID.",
         )
     return detail

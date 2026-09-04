@@ -13,7 +13,7 @@ router = APIRouter(prefix="/api/diagnostic", tags=["diagnostic"])
 
 
 @router.get("/questions", response_model=list[DiagnosticQuestion])
-def get_questions() -> list[dict]:
+def get_questions(current_student: Student = Depends(get_current_student)) -> list[dict]:
     return diagnostic_service.get_questions()
 
 

@@ -73,9 +73,13 @@ def run():
     check("POST /api/onboarding", r.status_code == 200 and r.json()["success"] is True)
 
     # --- Diagnostic ---
-    r = client.get("/api/diagnostic/questions")
+    r = client.get("/api/diagnostic/questions", headers=headers)
     questions = r.json()
-    check("GET /api/diagnostic/questions", r.status_code == 200 and len(questions) == 5)
+    check("GET /api/diagnostic/questions (auth)", r.status_code == 200 and len(questions) == 5)
+
+    # Diagnostic without a token -> 401
+    r = client.get("/api/diagnostic/questions")
+    check("GET /api/diagnostic/questions unauth -> 401", r.status_code == 401)
 
     r = client.post(
         "/api/diagnostic",
@@ -156,21 +160,22 @@ def run():
     s = client.get("/api/auth/me", headers=headers).json()
     student_id = s["student_id"]
 
-    # --- Evidence timeline by student id (instructor-gated, same user has access) ---
+    # --- Evidence timeline by student id (instructor-gated, student gets 403) ---
     r = client.get(f"/api/evidence/{student_id}/timeline", headers=headers)
-    check("GET /api/evidence/{id}/timeline (auth)", r.status_code == 200 and isinstance(r.json(), list))
+    check("GET /api/evidence/{id}/timeline (student -> 403)", r.status_code == 403)
 
     # Unauthenticated evidence -> 401
     r = client.get("/api/evidence/me/timeline")
     check("GET /api/evidence/me/timeline unauth -> 401", r.status_code == 401)
 
-    # --- Instructor endpoints (auth-gated) ---
+    # --- Instructor endpoints (require role='instructor') ---
+    # A regular student gets 403 Forbidden
     r = client.get("/api/instructor/summary", headers=headers)
-    check("GET /api/instructor/summary (auth)", r.status_code == 200)
+    check("GET /api/instructor/summary (student -> 403)", r.status_code == 403)
     r = client.get("/api/instructor/aggregate", headers=headers)
-    check("GET /api/instructor/aggregate (auth)", r.status_code == 200)
+    check("GET /api/instructor/aggregate (student -> 403)", r.status_code == 403)
     r = client.get("/api/instructor/students", headers=headers)
-    check("GET /api/instructor/students (auth)", r.status_code == 200)
+    check("GET /api/instructor/students (student -> 403)", r.status_code == 403)
 
     # Instructor without a token -> 401
     r = client.get("/api/instructor/students")

@@ -24,7 +24,7 @@ CoachModeLiteral = Literal[
 class CoachRequest(BaseModel):
     """One coach turn from the student."""
 
-    message: str = Field(..., description="The student's message to the coach.")
+    message: str = Field(..., min_length=1, max_length=4000, description="The student's message to the coach.")
     mode: Optional[CoachModeLiteral] = Field(
         default=None,
         description=(
@@ -34,14 +34,11 @@ class CoachRequest(BaseModel):
     )
     competency_id: Optional[str] = Field(
         default=None,
+        max_length=64,
         description=(
             "Optional Compass competency id (e.g. 'pid-reasoning'). If "
             "omitted, the manager's current target competency is used."
         ),
-    )
-    student_id: str = Field(
-        default="api-gateway-student",
-        description="The student submitting the turn.",
     )
 
 

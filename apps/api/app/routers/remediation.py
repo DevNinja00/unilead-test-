@@ -1,6 +1,6 @@
 """Remediation router — returns a targeted micro-lesson for a failing competency."""
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Path, Request
 
 from ..auth.dependencies import get_current_student
 from ..db.models import Student
@@ -12,8 +12,8 @@ router = APIRouter(prefix="/api/remediation", tags=["remediation"])
 
 @router.get("/{competency_id}", response_model=RemediationPlanResponse)
 def get_remediation_plan(
-    competency_id: str,
-    http_request: Request,
+    competency_id: str = Path(..., max_length=64, pattern=r"^[a-zA-Z0-9_-]+$"),
+    http_request: Request = ...,
     current_student: Student = Depends(get_current_student),
 ) -> dict:
     """Build a remediation plan for the given competency using the current

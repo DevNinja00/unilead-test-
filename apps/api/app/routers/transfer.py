@@ -1,6 +1,6 @@
 """Transfer router — presents a transfer task and evaluates the response."""
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Path, Request
 
 from ..auth.dependencies import get_current_student
 from ..db.models import Student
@@ -16,8 +16,8 @@ router = APIRouter(prefix="/api/transfer", tags=["transfer"])
 
 @router.get("/{competency_id}", response_model=TransferScenarioResponse)
 def get_transfer_scenario(
-    competency_id: str,
-    http_request: Request,
+    competency_id: str = Path(..., max_length=64, pattern=r"^[a-zA-Z0-9_-]+$"),
+    http_request: Request = ...,
     current_student: Student = Depends(get_current_student),
     scenario_id: str | None = None,
 ) -> dict:
@@ -29,9 +29,9 @@ def get_transfer_scenario(
 
 @router.post("/{competency_id}", response_model=TransferEvaluationResponse)
 def evaluate_transfer(
-    competency_id: str,
-    request: TransferEvaluationRequest,
-    http_request: Request,
+    competency_id: str = Path(..., max_length=64, pattern=r"^[a-zA-Z0-9_-]+$"),
+    request: TransferEvaluationRequest = ...,
+    http_request: Request = ...,
     current_student: Student = Depends(get_current_student),
 ) -> dict:
     """Evaluate the student's free-text response to a transfer prompt."""

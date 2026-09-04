@@ -16,15 +16,17 @@ from pydantic import BaseModel, Field
 class SimulationRequest(BaseModel):
     """Run a PID simulation with the given gains."""
 
-    kp: float = Field(default=2.0, description="Proportional gain.")
-    ki: float = Field(default=0.5, description="Integral gain.")
-    kd: float = Field(default=0.1, description="Derivative gain.")
+    kp: float = Field(default=2.0, ge=-100.0, le=100.0, description="Proportional gain.")
+    ki: float = Field(default=0.5, ge=-100.0, le=100.0, description="Integral gain.")
+    kd: float = Field(default=0.1, ge=-100.0, le=100.0, description="Derivative gain.")
     competency_id: Optional[str] = Field(
         default="pid-tuning",
+        max_length=64,
         description="Compass competency id this simulation is evidence for.",
     )
     task_id: str = Field(
         default="pid-001",
+        max_length=64,
         description="Identifier of the task the student is solving.",
     )
 

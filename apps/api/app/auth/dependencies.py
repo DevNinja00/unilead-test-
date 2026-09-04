@@ -103,7 +103,11 @@ def get_current_instructor(
 ) -> models.User:
     """Resolve the current user as an instructor.
 
-    For this MVP all authenticated users can access instructor endpoints.
-    In production, add a role column to the User model and gate on it.
+    Requires the user to have ``role='instructor'`` in the database.
     """
+    if current_user.role != "instructor":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Instructor access required.",
+        )
     return current_user

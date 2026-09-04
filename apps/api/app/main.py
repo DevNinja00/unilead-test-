@@ -138,6 +138,9 @@ async def add_security_headers(request, call_next):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'"
+    response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), payment=()"
     return response
 
 # --- Database: create tables on startup (no demo seeds) ---------------
@@ -203,6 +206,12 @@ _DEFAULT_JWT_SECRETS = {"change-me-in-production-please-use-a-long-random-string
 if settings.jwt_secret in _DEFAULT_JWT_SECRETS:
     import logging
     _log = logging.getLogger("unilead.main")
+    if settings.enforce_jwt_secret:
+        _log.critical(
+            "JWT_SECRET is using a default value. Set JWT_SECRET env var to a "
+            "strong random string and set ENFORCE_JWT_SECRET=true."
+        )
+        raise SystemExit("Refusing to start with default JWT secret. Set JWT_SECRET to a strong random value.")
     _log.warning(
         "JWT_SECRET is using a default value — set JWT_SECRET env var to a "
         "strong random string in production!"
@@ -216,7 +225,6 @@ def health_check() -> dict:
         "status": "ok",
         "service": "unilead-api",
         "modules": ["compass", "ai-education"],
-        "llm_provider": settings.llm_provider_type,
     }
 
 

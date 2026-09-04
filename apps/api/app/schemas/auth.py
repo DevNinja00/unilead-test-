@@ -9,7 +9,7 @@ class SignUpRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     username: str = Field(..., min_length=3, max_length=50, pattern=r"^[a-zA-Z0-9_]+$")
     email: EmailStr
-    password: str = Field(..., min_length=8, max_length=128)
+    password: str = Field(..., min_length=8, max_length=72)
 
     @model_validator(mode="after")
     def validate_password_strength(self) -> "SignUpRequest":
@@ -30,7 +30,7 @@ class SignUpRequest(BaseModel):
 
 class LoginRequest(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(..., max_length=72)
 
 
 class AuthResponse(BaseModel):

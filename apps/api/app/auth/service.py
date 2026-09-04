@@ -7,6 +7,7 @@ standard bcrypt (``$2b$...``).
 
 from __future__ import annotations
 
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -41,6 +42,26 @@ def verify_password(plain: str, hashed: Optional[str]) -> bool:
         return False
 
 
+def verify_password_timing_resistant(plain: str, hashed: Optional[str]) -> bool:
+    """Verify password, but always run a dummy bcrypt check when the hash
+    is missing or invalid to prevent timing side-channel attacks.
+    """
+    if not hashed:
+        # Run a dummy bcrypt check so the timing is the same as a valid hash
+        bcrypt.hashpw(b"dummy", bcrypt.gensalt(rounds=12))
+        return False
+    try:
+        pw_bytes = plain.encode("utf-8")[:72]
+        return bcrypt.checkpw(pw_bytes, hashed.encode("utf-8"))
+    except (ValueError, TypeError):
+        # Run dummy check on error to avoid leaking timing info
+        try:
+            bcrypt.hashpw(b"dummy", bcrypt.gensalt(rounds=12))
+        except Exception:
+            pass
+        return False
+
+
 # --- JWT -------------------------------------------------------------------
 def create_access_token(
     subject: str,
@@ -50,7 +71,13 @@ def create_access_token(
     expire = datetime.now(timezone.utc) + timedelta(
         minutes=expires_minutes or _settings.jwt_expire_minutes
     )
-    payload = {"sub": subject, "exp": expire}
+    payload = {
+        "sub": subject,
+        "exp": expire,
+        "iat": datetime.now(timezone.utc),
+        "iss": "unilead-api",
+        "jti": uuid.uuid4().hex,
+    }
     return jwt.encode(payload, _settings.jwt_secret, algorithm=_settings.jwt_algorithm)
 
 
@@ -61,7 +88,10 @@ def decode_access_token(token: str) -> Optional[str]:
             token,
             _settings.jwt_secret,
             algorithms=[_settings.jwt_algorithm],
+            options={"require": ["sub", "exp", "iss", "iat", "jti"]},
         )
+        if payload.get("iss") != "unilead-api":
+            return None
         return payload.get("sub")
     except JWTError:
         return None

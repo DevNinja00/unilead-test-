@@ -14,6 +14,7 @@ provider — the orchestrator already does this internally via
 from __future__ import annotations
 
 import logging
+from collections import OrderedDict
 from typing import TYPE_CHECKING
 
 from fastapi import Request
@@ -39,9 +40,27 @@ def _resolve_mode(mode_str: str | None):
 
 
 # Track turn indices per student for backwards-compatible UI fields.
-# (The orchestrator itself is stateless across turns — it doesn't know how
-# many turns a particular student has sent.)
-_TURN_COUNTERS: dict[str, int] = {}
+# LRU-bounded to prevent unbounded memory growth.
+class _BoundedTurnCounters(OrderedDict):
+    def __init__(self, maxsize: int = 500):
+        super().__init__()
+        self._maxsize = maxsize
+
+    def __setitem__(self, key, value):
+        if key in self:
+            self.move_to_end(key)
+        super().__setitem__(key, value)
+        if len(self) > self._maxsize:
+            self.popitem(last=False)
+
+
+_TURN_COUNTERS: _BoundedTurnCounters = _BoundedTurnCounters()
+
+
+def _sanitize_log_input(text: str) -> str:
+    """Strip control characters and truncate to prevent log injection."""
+    clean = "".join(c for c in text if c.isprintable() or c in "\n\t")
+    return clean[:200]
 
 
 def _next_turn_index(student_id: str) -> int:
@@ -117,7 +136,7 @@ async def process_turn(request_data, http_request: Request, student_id: str) -> 
         event_type="coach_turn",
         title=f"Coach turn ({active_mode})",
         detail=(
-            f"Student asked: \"{request_data.message[:80]}\". "
+            f"Student asked: \"{_sanitize_log_input(request_data.message[:80])}\". "
             f"Coach replied ({len(coach_message)} chars, scaffolding={scaffolding})."
         ),
         result="INFO",
