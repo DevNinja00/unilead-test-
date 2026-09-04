@@ -1,0 +1,67 @@
+"""Password hashing (bcrypt) and JWT token utilities.
+
+Uses the ``bcrypt`` library directly (instead of passlib) to avoid
+compatibility issues with newer bcrypt releases. The hash format is
+standard bcrypt (``$2b$...``).
+"""
+
+from __future__ import annotations
+
+from datetime import datetime, timedelta, timezone
+from typing import Optional
+
+import bcrypt
+from jose import JWTError, jwt
+
+from ..config import Settings
+
+_settings = Settings()
+
+# --- Password hashing ------------------------------------------------------
+
+
+def hash_password(plain: str) -> str:
+    """Hash a password using bcrypt (cost factor 12)."""
+    # bcrypt limits passwords to 72 bytes; truncate if needed (rare for real
+    # passwords, but defensive).
+    pw_bytes = plain.encode("utf-8")[:72]
+    salt = bcrypt.gensalt(rounds=12)
+    hashed = bcrypt.hashpw(pw_bytes, salt)
+    return hashed.decode("utf-8")
+
+
+def verify_password(plain: str, hashed: Optional[str]) -> bool:
+    """Verify a password against a stored bcrypt hash."""
+    if not hashed:
+        return False
+    try:
+        pw_bytes = plain.encode("utf-8")[:72]
+        return bcrypt.checkpw(pw_bytes, hashed.encode("utf-8"))
+    except (ValueError, TypeError):
+        return False
+
+
+# --- JWT -------------------------------------------------------------------
+def create_access_token(
+    subject: str,
+    expires_minutes: Optional[int] = None,
+) -> str:
+    """Issue a JWT for ``subject`` (the user id)."""
+    expire = datetime.now(timezone.utc) + timedelta(
+        minutes=expires_minutes or _settings.jwt_expire_minutes
+    )
+    payload = {"sub": subject, "exp": expire}
+    return jwt.encode(payload, _settings.jwt_secret, algorithm=_settings.jwt_algorithm)
+
+
+def decode_access_token(token: str) -> Optional[str]:
+    """Decode a JWT and return the subject (user id as string) or None."""
+    try:
+        payload = jwt.decode(
+            token,
+            _settings.jwt_secret,
+            algorithms=[_settings.jwt_algorithm],
+        )
+        return payload.get("sub")
+    except JWTError:
+        return None

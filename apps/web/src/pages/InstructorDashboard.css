@@ -1,0 +1,215 @@
+.instructor-dashboard {
+  padding-top: var(--space-6);
+}
+
+.instructor-dashboard__eyebrow {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-primary);
+  margin-bottom: 4px;
+}
+
+.instructor-dashboard__title {
+  font-size: var(--fs-2xl);
+  font-weight: 800;
+  margin-bottom: var(--space-2);
+}
+
+.instructor-dashboard__subtitle {
+  margin-bottom: var(--space-5);
+  line-height: 1.6;
+}
+
+/* Top-level class stats */
+.instructor-dashboard__stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.instructor-dashboard__stat-label {
+  display: block;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-faint);
+  margin-bottom: 6px;
+}
+
+.instructor-dashboard__stat-value {
+  display: block;
+  font-size: var(--fs-2xl);
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.instructor-dashboard__stat-value--warning {
+  color: #b45309;
+}
+
+/* Per-competency aggregate table */
+.instructor-dashboard__aggregate-card,
+.instructor-dashboard__roster-card {
+  margin-bottom: var(--space-4);
+}
+
+.instructor-dashboard__section-title {
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  margin: 0 0 4px 0;
+}
+
+.instructor-dashboard__section-hint {
+  font-size: var(--fs-sm);
+  margin: 0 0 var(--space-3) 0;
+}
+
+.instructor-dashboard__aggregate-table {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.instructor-dashboard__aggregate-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+  gap: var(--space-2);
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--fs-sm);
+  align-items: center;
+}
+
+.instructor-dashboard__aggregate-row:last-child {
+  border-bottom: none;
+}
+
+.instructor-dashboard__aggregate-row--head {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: var(--fs-xs);
+  color: var(--color-text-faint);
+}
+
+.instructor-dashboard__aggregate-name {
+  font-weight: 600;
+}
+
+.instructor-dashboard__aggregate-count {
+  text-align: center;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 700;
+}
+
+/* Roster */
+.instructor-dashboard__roster {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.instructor-dashboard__roster-row {
+  display: grid;
+  grid-template-columns: 2fr 80px 1fr;
+  gap: var(--space-3);
+  padding: 12px 8px;
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+  align-items: center;
+  transition: background 0.15s;
+}
+
+.instructor-dashboard__roster-row:hover {
+  background: var(--color-primary-light);
+}
+
+.instructor-dashboard__roster-row:last-child {
+  border-bottom: none;
+}
+
+.instructor-dashboard__roster-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.instructor-dashboard__roster-name {
+  font-weight: 600;
+  font-size: var(--fs-md);
+}
+
+.instructor-dashboard__roster-id {
+  font-size: var(--fs-xs);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.instructor-dashboard__roster-progress {
+  display: flex;
+  justify-content: center;
+}
+
+.instructor-dashboard__roster-competencies {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.instructor-dashboard__roster-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+}
+
+.instructor-dashboard__roster-dot--success {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.instructor-dashboard__roster-dot--warning {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.instructor-dashboard__roster-dot--danger {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.instructor-dashboard__roster-dot--neutral {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.instructor-dashboard__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-4);
+}
+
+@media (max-width: 768px) {
+  .instructor-dashboard__stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .instructor-dashboard__aggregate-row {
+    grid-template-columns: 1.5fr 1fr 1fr 1fr 1fr;
+    font-size: var(--fs-xs);
+  }
+  .instructor-dashboard__roster-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}

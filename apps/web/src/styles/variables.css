@@ -1,0 +1,61 @@
+:root {
+  /* Brand colors */
+  --color-primary: #2952e3;
+  --color-primary-dark: #1f3fb8;
+  --color-primary-light: #eaefff;
+  --color-accent: #ff8a3d;
+  --color-accent-dark: #e6742a;
+  --color-accent-light: #fff1e6;
+
+  /* Status colors */
+  --color-success: #22a06b;
+  --color-success-light: #e6f7ef;
+  --color-warning: #d99a1f;
+  --color-warning-light: #fff6e0;
+  --color-danger: #e5484d;
+  --color-danger-light: #fdeaea;
+  --color-neutral: #8a94a6;
+  --color-neutral-light: #f1f2f5;
+
+  /* Text */
+  --color-text: #14181f;
+  --color-text-muted: #5b6472;
+  --color-text-faint: #93989f;
+
+  /* Surfaces */
+  --color-bg: #f7f8fb;
+  --color-surface: #ffffff;
+  --color-border: #e6e8ee;
+
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-full: 999px;
+
+  /* Shadow */
+  --shadow-sm: 0 1px 2px rgba(20, 24, 31, 0.06);
+  --shadow-md: 0 8px 24px rgba(20, 24, 31, 0.08);
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* Type */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.875rem;
+  --fs-md: 1rem;
+  --fs-lg: 1.125rem;
+  --fs-xl: 1.375rem;
+  --fs-2xl: 1.75rem;
+  --fs-3xl: 2.25rem;
+
+  --max-width: 1160px;
+}

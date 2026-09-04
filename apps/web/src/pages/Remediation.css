@@ -1,0 +1,124 @@
+.remediation {
+  padding-top: var(--space-6);
+}
+
+.remediation__eyebrow {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-primary);
+  margin-bottom: 4px;
+}
+
+.remediation__title {
+  font-size: var(--fs-2xl);
+  font-weight: 800;
+  margin-bottom: var(--space-2);
+}
+
+.remediation__subtitle {
+  margin-bottom: var(--space-5);
+  line-height: 1.6;
+}
+
+.remediation__summary-card,
+.remediation__focus-card,
+.remediation__question-card,
+.remediation__steps-card {
+  margin-bottom: var(--space-4);
+}
+
+.remediation__summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--color-border);
+}
+
+.remediation__summary-row:last-of-type {
+  border-bottom: none;
+}
+
+.remediation__summary-label {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-faint);
+}
+
+.remediation__summary-value {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
+
+.remediation__summary-text {
+  margin-top: var(--space-3);
+  font-size: var(--fs-sm);
+  color: var(--color-text);
+  background: var(--color-bg);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+}
+
+.remediation__section-title {
+  font-size: var(--fs-md);
+  font-weight: 700;
+  margin: 0 0 var(--space-2) 0;
+}
+
+.remediation__focus-text {
+  font-size: var(--fs-md);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.remediation__question-text {
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  line-height: 1.5;
+  margin: 0 0 var(--space-2) 0;
+}
+
+.remediation__question-hint {
+  font-size: var(--fs-xs);
+  margin: 0;
+}
+
+.remediation__steps {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.remediation__steps li {
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+}
+
+.remediation__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+  flex-wrap: wrap;
+}
+
+@media (max-width: 600px) {
+  .remediation__actions {
+    flex-direction: column-reverse;
+  }
+  .remediation__actions > * {
+    width: 100%;
+  }
+  .remediation__summary-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+}

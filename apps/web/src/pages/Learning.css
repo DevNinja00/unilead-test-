@@ -1,0 +1,58 @@
+.learning__eyebrow {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-primary);
+  margin-bottom: 4px;
+}
+
+.learning__title {
+  font-size: var(--fs-2xl);
+  font-weight: 800;
+  margin-bottom: var(--space-5);
+}
+
+.learning__layout {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.learning__section {
+  margin-bottom: var(--space-5);
+}
+
+.learning__section:last-child {
+  margin-bottom: 0;
+}
+
+.learning__section-heading {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  margin-bottom: var(--space-2);
+}
+
+.learning__section-body {
+  line-height: 1.7;
+}
+
+.learning__actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+  justify-content: flex-end;
+}
+
+@media (max-width: 860px) {
+  .learning__layout {
+    grid-template-columns: 1fr;
+  }
+  .learning__actions {
+    flex-direction: column-reverse;
+  }
+  .learning__actions > * {
+    width: 100%;
+  }
+}

@@ -1,0 +1,47 @@
+.competency-profile__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+  flex-wrap: wrap;
+}
+
+.competency-profile__title {
+  font-size: var(--fs-2xl);
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.competency-profile__summary {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.competency-profile__summary-count {
+  font-size: var(--fs-2xl);
+  font-weight: 800;
+  color: var(--color-success);
+}
+
+.competency-profile__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.competency-profile__row-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.competency-profile__name {
+  font-weight: 700;
+}

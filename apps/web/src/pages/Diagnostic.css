@@ -1,0 +1,33 @@
+.diagnostic-intro {
+  padding-top: var(--space-8);
+}
+
+.diagnostic-intro__icon {
+  font-size: 40px;
+  margin-bottom: var(--space-4);
+}
+
+.diagnostic-intro__title {
+  font-size: var(--fs-2xl);
+  font-weight: 800;
+  margin-bottom: var(--space-3);
+}
+
+.diagnostic-intro__text {
+  margin-bottom: var(--space-5);
+  line-height: 1.6;
+}
+
+.diagnostic {
+  padding-top: var(--space-7);
+}
+
+.diagnostic__progress {
+  margin-bottom: var(--space-6);
+}
+
+.diagnostic__actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--space-5);
+}

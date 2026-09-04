@@ -1,0 +1,28 @@
+.progress-overview__header {
+  margin-bottom: var(--space-5);
+}
+
+.progress-overview__title {
+  font-size: var(--fs-2xl);
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.progress-overview__summary {
+  margin-bottom: var(--space-6);
+}
+
+.progress-overview__subheading {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  margin-bottom: var(--space-4);
+}
+
+.progress-overview__grid {
+  margin-bottom: var(--space-6);
+}
+
+.progress-overview__cta {
+  display: flex;
+  justify-content: center;
+}

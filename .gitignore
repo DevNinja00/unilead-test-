@@ -1,0 +1,116 @@
+# ---- Operating Systems ----
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*~
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Environments & virtualenvs
+.env
+!.env.example
+.env.local
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+pythonenv*/
+
+# Testing, coverage, linting & typing artifacts
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.hypothesis/
+htmlcov/
+.tox/
+.nox/
+.dmypy.json
+dmypy.json
+.mrunit/
+
+# Docs build
+_build/
+_site/
+
+# ---- Node.js / React ----
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Build outputs
+dist/
+dist-ssr/
+build/
+*.local
+
+# Bundler caches
+.pnpm-store/
+.eslintcache
+.turbo/
+.cache/
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+.next/
+out/
+.vite/
+
+# ---- IDEs & Editors ----
+# VS Code
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/tasks.json
+
+# JetBrains (IntelliJ IDEA, PyCharm, WebStorm, etc.)
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+.idea_modules/
+
+# Vim / Neovim
+*.swo
+.vim/
+.vscode-server/
+
+# ---- Misc tooling ----
+*.log
+logs/
+*.pid
+*.seed
+*.pid.lock

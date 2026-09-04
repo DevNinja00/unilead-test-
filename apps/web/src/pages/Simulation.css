@@ -1,0 +1,221 @@
+.simulation {
+  padding-top: var(--space-6);
+}
+
+.simulation__eyebrow {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-primary);
+  margin-bottom: 4px;
+}
+
+.simulation__title {
+  font-size: var(--fs-2xl);
+  font-weight: 800;
+  margin-bottom: var(--space-2);
+}
+
+.simulation__subtitle {
+  margin-bottom: var(--space-5);
+  line-height: 1.6;
+}
+
+.simulation__section-title {
+  font-size: var(--fs-md);
+  font-weight: 700;
+  margin: 0 0 var(--space-3) 0;
+}
+
+.simulation__subsection-title {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  margin: 0 0 var(--space-2) 0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-faint);
+}
+
+/* NEW: feedback loop diagram */
+.simulation__diagram-card {
+  margin-bottom: var(--space-4);
+}
+
+.simulation__diagram {
+  width: 100%;
+  max-width: 600px;
+  height: auto;
+  display: block;
+  color: var(--color-text);
+}
+
+/* NEW: Kp/Ki/Kd sliders */
+.simulation__gains-card {
+  margin-bottom: var(--space-4);
+}
+
+.simulation__sliders {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.simulation__slider {
+  display: grid;
+  grid-template-columns: 200px 1fr 60px;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.simulation__slider-label {
+  font-size: var(--fs-sm);
+}
+
+.simulation__slider input[type='range'] {
+  width: 100%;
+  accent-color: var(--color-primary);
+}
+
+.simulation__slider-value {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  text-align: right;
+  color: var(--color-primary);
+}
+
+/* NEW: requirements card */
+.simulation__requirements-card {
+  margin-bottom: var(--space-4);
+}
+
+.simulation__requirements {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.simulation__requirements li {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 6px 0;
+  font-size: var(--fs-sm);
+}
+
+.simulation__requirements li.met {
+  color: var(--color-success, #15803d);
+}
+
+.simulation__requirements li.missed {
+  color: var(--color-danger, #b91c1c);
+}
+
+.simulation__req-limit {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--color-text-faint);
+}
+
+.simulation__card {
+  min-height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.simulation__ready {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  text-align: center;
+  padding: var(--space-4) 0;
+}
+
+.simulation__icon {
+  font-size: 34px;
+}
+
+.simulation__result {
+  width: 100%;
+}
+
+.simulation__status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+  flex-wrap: wrap;
+}
+
+.simulation__metrics {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-4);
+}
+
+.simulation__metric {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  text-align: center;
+}
+
+.simulation__metric-label {
+  display: block;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-faint);
+  margin-bottom: 6px;
+}
+
+.simulation__metric-value {
+  display: block;
+  font-size: var(--fs-xl);
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.simulation__failure-hint {
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  background: var(--color-primary-light);
+  border-radius: var(--radius-md);
+  text-align: center;
+  font-size: var(--fs-sm);
+}
+
+.simulation__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
+@media (max-width: 600px) {
+  .simulation__metrics {
+    grid-template-columns: 1fr 1fr;
+  }
+  .simulation__slider {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+  .simulation__slider-value {
+    text-align: left;
+  }
+  .simulation__actions {
+    flex-direction: column-reverse;
+  }
+  .simulation__actions > * {
+    width: 100%;
+  }
+}

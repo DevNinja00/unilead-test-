@@ -1,0 +1,34 @@
+# Unilead API (apps/api) - Python dependencies
+# FastAPI + Pydantic + AI Education subsystem (installed editable from ../../services/ai_education)
+# + SQLAlchemy + SQLite for persistence + JWT auth + Alembic migrations
+
+# Web framework
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+
+# Validation + settings
+pydantic==2.10.3
+pydantic-settings>=2.5.0
+
+# HTTP client (used by FastAPI's TestClient)
+httpx==0.28.1
+
+# Database (SQLite via SQLAlchemy 2.0 sync API)
+sqlalchemy>=2.0,<3.0
+# No extra driver needed for SQLite — Python ships with sqlite3 built in.
+# For async SQLite support (if needed later): aiosqlite>=0.20
+
+# Password hashing (bcrypt)
+passlib[bcrypt]>=1.7.4
+
+# JWT tokens
+python-jose[cryptography]>=3.3.0
+
+# Email validation (optional but useful for signup)
+email-validator>=2.0
+
+# Migrations
+alembic>=1.13
+
+# Testing
+pytest>=8.0

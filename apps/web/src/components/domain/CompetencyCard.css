@@ -1,0 +1,12 @@
+.competency-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.competency-card__name {
+  font-size: var(--fs-md);
+  font-weight: 700;
+}

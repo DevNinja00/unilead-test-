@@ -1,0 +1,13 @@
+.onboarding {
+  padding-top: var(--space-7);
+}
+
+.onboarding__progress {
+  margin-bottom: var(--space-6);
+}
+
+.onboarding__actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--space-5);
+}

@@ -1,0 +1,43 @@
+.evidence-timeline-page {
+  padding-top: var(--space-6);
+}
+
+.evidence-timeline-page__eyebrow {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-primary);
+  margin-bottom: 4px;
+}
+
+.evidence-timeline-page__title {
+  font-size: var(--fs-2xl);
+  font-weight: 800;
+  margin-bottom: var(--space-2);
+}
+
+.evidence-timeline-page__subtitle {
+  margin-bottom: var(--space-5);
+  line-height: 1.6;
+}
+
+.evidence-timeline-page__card {
+  margin-bottom: var(--space-4);
+}
+
+.evidence-timeline-page__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+@media (max-width: 600px) {
+  .evidence-timeline-page__actions {
+    flex-direction: column-reverse;
+  }
+  .evidence-timeline-page__actions > * {
+    width: 100%;
+  }
+}

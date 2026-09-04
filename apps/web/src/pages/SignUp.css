@@ -1,0 +1,119 @@
+.signup {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.signup__panel {
+  background: linear-gradient(160deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  color: #fff;
+  padding: var(--space-8);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-4);
+}
+
+.signup__brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  font-size: var(--fs-xl);
+}
+
+.signup__brand-mark {
+  color: var(--color-accent);
+}
+
+.signup__headline {
+  font-size: var(--fs-3xl);
+  font-weight: 800;
+  max-width: 420px;
+  line-height: 1.25;
+}
+
+.signup__subtext {
+  color: rgba(255, 255, 255, 0.85);
+  max-width: 380px;
+  font-size: var(--fs-md);
+}
+
+.signup__form-side {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+}
+
+.signup__card {
+  width: 100%;
+  max-width: 400px;
+}
+
+.signup__title {
+  font-size: var(--fs-2xl);
+  font-weight: 800;
+}
+
+.signup__lede {
+  margin-top: var(--space-2);
+  margin-bottom: var(--space-5);
+  font-size: var(--fs-sm);
+}
+
+.signup__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.signup__error {
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-3);
+  font-size: var(--fs-sm);
+}
+
+.signup__alt {
+  text-align: center;
+  margin-top: var(--space-4);
+  font-size: var(--fs-sm);
+}
+
+.signup__alt a {
+  color: var(--color-primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.signup__alt a:hover {
+  text-decoration: underline;
+}
+
+.signup__demo-hint {
+  text-align: center;
+  margin-top: var(--space-2);
+  font-size: var(--fs-xs);
+}
+
+.signup__demo-hint code {
+  background: var(--color-bg);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-xs);
+}
+
+@media (max-width: 860px) {
+  .signup {
+    grid-template-columns: 1fr;
+  }
+  .signup__panel {
+    padding: var(--space-6);
+  }
+  .signup__headline {
+    font-size: var(--fs-2xl);
+  }
+}

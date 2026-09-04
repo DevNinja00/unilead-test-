@@ -1,0 +1,229 @@
+.ai-coach {
+  padding-top: var(--space-6);
+}
+
+.ai-coach__context {
+  margin-bottom: var(--space-4);
+}
+
+.ai-coach__context-card {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.ai-coach__context-label {
+  display: block;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-faint);
+  margin-bottom: 2px;
+}
+
+.ai-coach__context-value {
+  display: block;
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  color: var(--color-text);
+}
+
+.ai-coach__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.ai-coach__title {
+  font-size: var(--fs-xl);
+  font-weight: 800;
+}
+
+.ai-coach__messages {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 4px;
+  margin-bottom: var(--space-4);
+}
+
+.ai-coach__bubble {
+  max-width: 80%;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+}
+
+.ai-coach__bubble p {
+  margin: 0;
+}
+
+.ai-coach__bubble-sender {
+  display: block;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+  opacity: 0.7;
+}
+
+.ai-coach__bubble--coach {
+  align-self: flex-start;
+  background: var(--color-primary-light);
+  color: var(--color-text);
+  border-bottom-left-radius: 4px;
+}
+
+.ai-coach__bubble--student {
+  align-self: flex-end;
+  background: var(--color-primary);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+
+.ai-coach__bubble--thinking {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ai-coach__typing {
+  display: flex;
+  gap: 4px;
+}
+
+.ai-coach__typing i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  opacity: 0.5;
+  animation: coach-typing 1s infinite ease-in-out;
+}
+
+.ai-coach__typing i:nth-child(2) { animation-delay: 0.15s; }
+.ai-coach__typing i:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes coach-typing {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-3px); opacity: 1; }
+}
+
+.ai-coach__input-row {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.ai-coach__input {
+  flex: 1;
+  padding: 12px 16px;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--color-border);
+  font-size: var(--fs-md);
+  font-family: inherit;
+}
+
+.ai-coach__input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.ai-coach__finished {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+  flex-wrap: wrap;
+}
+
+/* NEW: mode selector + suggested actions panel */
+.ai-coach__mode-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.ai-coach__mode-label {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-faint);
+}
+
+.ai-coach__mode-select {
+  flex: 1;
+  min-width: 240px;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--color-border);
+  background: #fff;
+  font-size: var(--fs-sm);
+  font-family: inherit;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.ai-coach__mode-select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.ai-coach__suggested {
+  background: var(--color-primary-light);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  margin-bottom: var(--space-3);
+  font-size: var(--fs-sm);
+}
+
+.ai-coach__suggested-label {
+  display: block;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-faint);
+  margin-bottom: 4px;
+}
+
+.ai-coach__suggested ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--color-text);
+}
+
+.ai-coach__suggested li {
+  margin: 2px 0;
+}
+
+@media (max-width: 600px) {
+  .ai-coach__context-card {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+  .ai-coach__bubble {
+    max-width: 92%;
+  }
+  .ai-coach__finished {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+  .ai-coach__finished > .btn {
+    width: 100%;
+  }
+}

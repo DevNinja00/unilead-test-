@@ -1,0 +1,1 @@
+"""Course-specific competency graphs (e.g. MEC271)."""
