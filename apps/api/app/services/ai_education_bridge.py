@@ -18,6 +18,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from ai_education.domain.enums import CompetencyState
 from fastapi import Request
 
 from .mock_data import INITIAL_COMPETENCIES
@@ -181,9 +182,10 @@ def sync_compass_state_from_manager(gateway: APIGateway, student_id: str | None 
                 if record is None:
                     total_progress += c.progress
                     continue
-                # Only update competencies the manager has evidence for
-                # (otherwise untouched competencies keep their seed values).
-                if record.evidence_history:
+                # Only update competencies the manager has evidence for, or the
+                # diagnostic engine has already placed (state != NOT_DEMONSTRATED).
+                # Otherwise untouched competencies keep their seed values.
+                if record.evidence_history or record.state is not CompetencyState.NOT_DEMONSTRATED:
                     new_status = compass_status_from_manager(c.competency_id, gateway)
                     new_progress = compass_progress_from_manager(c.competency_id, gateway)
                     crud.upsert_competency(

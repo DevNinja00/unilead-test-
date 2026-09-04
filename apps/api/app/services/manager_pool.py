@@ -12,10 +12,10 @@ managers are rebuilt from the DB on next access
 (see ``load_manager_for_student``).
 
 The DB is the source of truth for *what* the student has demonstrated.
-The manager is rebuilt from the DB by re-recording every simulation_run
-and transfer_evaluation as PracticalEvidence. (Diagnostic and coach
-messages don't carry evidence in the AI Education sense — only simulation
-and transfer do.)
+The manager is rebuilt from the DB by re-recording every simulation run
+as PracticalEvidence, then re-applying the latest diagnostic placement
+and each transfer promotion to match the persisted Compass snapshot.
+(Coach messages don't carry evidence in the AI Education sense.)
 """
 
 from __future__ import annotations
@@ -114,9 +114,8 @@ def _replay_evidence_from_db(
       - Build PracticalEvidence with the same attempt number + result.
       - Record it on the matching CompetencyRecord.
 
-    Transfer evaluations don't carry PIDParameters/metrics in the same
-    shape, so they're not replayed here — the Compass-side evidence
-    timeline (in the DB) is the source of truth for those.
+    The latest diagnostic placement and every transfer promotion are then
+    re-applied so the rebuilt manager matches the persisted Compass state.
     """
     try:
         from ai_education.domain.evidence import (
@@ -163,10 +162,122 @@ def _replay_evidence_from_db(
                         record.state = CompetencyState.DEVELOPING
                     elif record.state == CompetencyState.DEVELOPING:
                         record.state = CompetencyState.DEMONSTRATED
+
+            # The DiagnosticEngine writes state directly (without evidence),
+            # so a fresh manager would otherwise lose that placement. Re-apply
+            # the most recent diagnostic submission so the manager matches the
+            # persisted Compass snapshot.
+            _replay_latest_diagnostic(db, student_id, manager)
+
+            # Transfer evaluations are likewise not carried as PracticalEvidence
+            # (no PID metrics shape); re-apply their promotions instead.
+            _replay_transfer_promotions(db, student_id, manager)
         finally:
             db.close()
     except Exception:
         _log.warning("Failed to replay evidence from DB for student=%s", student_id, exc_info=True)
+
+
+def _replay_latest_diagnostic(db, student_id: str, manager: StudentModelManager) -> None:
+    """Re-apply the most recent diagnostic placement onto ``manager``.
+
+    Mirrors DiagnosticEngine.evaluate_diagnostic semantics using the
+    persisted per-answer correctness: all correct → DEMONSTRATED, partially
+    correct → DEVELOPING, none → NOT_DEMONSTRATED, then enforces the
+    prerequisite safety rule in topological order.
+    """
+    from ai_education.domain.diagnostic import DiagnosticEngine
+
+    from ..db import models
+    from ..services.ai_education_bridge import compass_id_to_mec271
+
+    sub = (
+        db.query(models.DiagnosticSubmission)
+        .filter(models.DiagnosticSubmission.student_id == student_id)
+        .order_by(models.DiagnosticSubmission.id.desc())
+        .first()
+    )
+    if sub is None:
+        return
+
+    try:
+        comps = (
+            db.query(models.DiagnosticAnswer)
+            .filter(models.DiagnosticAnswer.submission_id == sub.id)
+            .all()
+        )
+
+        # Aggregate per-competency correctness across the submission.
+        raw_correct: dict[str, tuple[int, int]] = {}
+        for a in comps:
+            mec271_id = compass_id_to_mec271(a.competency_id)
+            correct, total = raw_correct.get(mec271_id, (0, 0))
+            raw_correct[mec271_id] = (correct + (1 if a.correct else 0), total + 1)
+
+        raw: dict[str, CompetencyState] = {}
+        for mec271_id, (correct, total) in raw_correct.items():
+            if correct == 0:
+                raw[mec271_id] = CompetencyState.NOT_DEMONSTRATED
+            elif correct == total:
+                raw[mec271_id] = CompetencyState.DEMONSTRATED
+            else:
+                raw[mec271_id] = CompetencyState.DEVELOPING
+
+        # Enforce the prerequisite safety rule in topological order, exactly
+        # like DiagnosticEngine.evaluate_diagnostic.
+        topo_order = DiagnosticEngine._topological_order(manager.graph)
+        final: dict[str, CompetencyState] = {}
+        for node_id in topo_order:
+            node = manager.graph.get_node(node_id)
+            if node is None:
+                continue
+            prerequisites_ok = all(
+                final.get(parent_id) == CompetencyState.DEMONSTRATED
+                for parent_id in node.parent_ids
+            )
+            if not prerequisites_ok:
+                final[node_id] = CompetencyState.NOT_DEMONSTRATED
+            elif node_id in raw:
+                final[node_id] = raw[node_id]
+
+        if not final:
+            return
+        for node_id, state in final.items():
+            record = manager.profile.competencies.get(node_id)
+            if record is not None:
+                record.state = state
+    except Exception:
+        _log.warning(
+            "Failed to replay diagnostic placement for student=%s", student_id, exc_info=True
+        )
+
+
+def _replay_transfer_promotions(db, student_id: str, manager: StudentModelManager) -> None:
+    """Re-apply transfer-evaluation promotions onto ``manager``.
+
+    Mirrors transfer_service.evaluate_response: each passed evaluation moves
+    the record one step NOT_DEMONSTRATED → DEVELOPING → DEMONSTRATED.
+    """
+    from ..db import models
+    from ..services.ai_education_bridge import compass_id_to_mec271
+
+    evals = (
+        db.query(models.TransferEvaluation)
+        .filter(models.TransferEvaluation.student_id == student_id)
+        .order_by(models.TransferEvaluation.id.asc())
+        .all()
+    )
+    for ev in evals:
+        if not ev.passed:
+            continue
+        mec271_id = compass_id_to_mec271(ev.competency_id)
+        record = manager.profile.competencies.get(mec271_id)
+        if record is None:
+            continue
+        if record.state == CompetencyState.NOT_DEMONSTRATED:
+            record.state = CompetencyState.DEVELOPING
+        elif record.state == CompetencyState.DEVELOPING:
+            record.state = CompetencyState.DEMONSTRATED
 
 
 def clear_manager_from_pool(request: Request, student_id: str) -> None:

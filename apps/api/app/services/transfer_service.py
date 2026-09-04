@@ -107,6 +107,18 @@ def evaluate_response(
         scenario=scenario,
     )
 
+    # Promote the manager's record so sync_compass_state_from_manager
+    # reflects the outcome (same progression as a passing simulation run:
+    # first success → DEVELOPING, second → DEMONSTRATED).
+    from ai_education.domain.enums import CompetencyState
+
+    record = gateway.student_manager.profile.competencies.get(mec271_id)
+    if record is not None and result.is_transfer_successful:
+        if record.state is CompetencyState.NOT_DEMONSTRATED:
+            record.state = CompetencyState.DEVELOPING
+        elif record.state is CompetencyState.DEVELOPING:
+            record.state = CompetencyState.DEMONSTRATED
+
     # Sync state back to Compass so /api/competencies reflects the transfer outcome
     ai_education_bridge.sync_compass_state_from_manager(gateway)
 

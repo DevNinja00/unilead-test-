@@ -87,7 +87,7 @@ def submit_diagnostic(
     # the Compass-style results derived above.
     if http_request is not None:
         try:
-            _run_ai_education_diagnostic(per_comp, http_request, student_id)
+            _run_ai_education_diagnostic(answers, http_request, student_id)
             # Sync the (possibly updated) competency state back to Compass.
             ai_education_bridge.sync_compass_state_from_manager(
                 ai_education_bridge.get_gateway(http_request, student_id)
@@ -167,9 +167,9 @@ def submit_diagnostic(
 
 
 def _run_ai_education_diagnostic(
-    per_comp: dict[str, dict], http_request: Request, student_id: str
+    answers: list[dict], http_request: Request, student_id: str
 ) -> None:
-    """Translate the per-competency accuracy into a DiagnosticEngine run."""
+    """Translate the submitted diagnostic answers into a DiagnosticEngine run."""
     from ai_education.domain.diagnostic import (
         DiagnosticAssessment,
         DiagnosticEngine,
@@ -180,31 +180,32 @@ def _run_ai_education_diagnostic(
     gateway = ai_education_bridge.get_gateway(http_request, student_id)
     manager = gateway.student_manager
 
-    # Build one DiagnosticItem per competency (binary: pass if accuracy > 0.5).
+    # Build one real DiagnosticItem per diagnostic question (from the actual
+    # question bank) so the engine scores each competency from its questions.
+    # option ids in DIAGNOSTIC_QUESTIONS are ordered, so the index of the
+    # student's picked option (and of the correct one) is stable.
+    picked = {a["question_id"]: a["option_id"] for a in answers}
     items: list[DiagnosticItem] = []
     responses: list[DiagnosticResponse] = []
-    for compass_id, entry in per_comp.items():
-        mec271_id = ai_education_bridge.compass_id_to_mec271(compass_id)
-        passed = entry["correct"] >= entry["total"] / 2
+    for q in DIAGNOSTIC_QUESTIONS:
+        option_ids = [o["id"] for o in q["options"]]
+        mec271_id = ai_education_bridge.compass_id_to_mec271(q["competency_id"])
+        correct_index = option_ids.index(CORRECT_ANSWERS[q["id"]])
         items.append(
             DiagnosticItem(
+                item_id=q["id"],
                 competency_id=mec271_id,
-                prompt=f"Diagnostic for {compass_id}",
-                options=[],
-                correct_option_index=0,
+                question=q["prompt"],
+                options=[o["label"] for o in q["options"]],
+                correct_option_index=correct_index,
             )
         )
-        responses.append(
-            DiagnosticResponse(
-                item_id=f"diag-{mec271_id}",
-                competency_id=mec271_id,
-                correct=passed,
-            )
-        )
+        picked_option = picked.get(q["id"])
+        selected_index = option_ids.index(picked_option) if picked_option in option_ids else 0
+        responses.append(DiagnosticResponse(item_id=q["id"], selected_option_index=selected_index))
 
     assessment = DiagnosticAssessment(
         student_id=manager.profile.student_id,
-        items=items,
         responses=responses,
     )
     DiagnosticEngine().evaluate_diagnostic(
