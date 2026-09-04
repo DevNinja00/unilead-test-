@@ -77,7 +77,7 @@ export default function Diagnostic() {
   }
 
   const questions = state.data;
-  const current = questions[step];
+  const current = questions[step]!;
   const isLast = step === questions.length - 1;
   const existingAnswer = answers.find((a) => a.questionId === current.id)?.optionId;
 

@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import Navbar from './components/layout/Navbar';
 import { ProtectedRoute, InstructorRoute } from './components/auth/ProtectedRoute';
+import NotFound from './pages/NotFound';
 
 import SignUp from './pages/SignUp';
 import Login from './pages/Login';
@@ -76,7 +77,7 @@ export default function App() {
         <Route path="/instructor" element={<InstructorRoute><InstructorDashboard /></InstructorRoute>} />
         <Route path="/instructor/students/:studentId" element={<InstructorRoute><InstructorStudentDetail /></InstructorRoute>} />
 
-        <Route path="*" element={<Navigate to="/home" replace />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </Layout>
   );

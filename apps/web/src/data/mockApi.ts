@@ -231,7 +231,7 @@ export async function getReview(competencyId: string): Promise<ReviewData> {
 // change), and we merge the result into the passed-in student object.
 export async function completeReview(student: Student): Promise<Student> {
   const active =
-    student.competencies.find((c) => c.status === 'DEVELOPING') ?? student.competencies[0];
+    student.competencies.find((c) => c.status === 'DEVELOPING') ?? student.competencies[0]!;
 
   const r = await apiPost<ApiReviewResponse>('/review', {
     competency_id: active.id,

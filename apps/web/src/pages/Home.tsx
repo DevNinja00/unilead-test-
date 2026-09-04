@@ -24,7 +24,7 @@ export default function Home() {
     try {
       const s = student ?? (await getStudent());
       if (!student) setStudent(s);
-      const activeCompetency = s.competencies.find((c) => c.status === 'DEVELOPING') ?? s.competencies[0];
+      const activeCompetency = s.competencies.find((c) => c.status === 'DEVELOPING') ?? s.competencies[0]!;
       const rec = await getRecommendation(journey, activeCompetency.name);
       setState({ status: 'success', data: { student: s, recommendation: rec } });
     } catch (err) {

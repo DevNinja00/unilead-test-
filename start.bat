@@ -122,15 +122,11 @@ echo    - Frontend (!FRONTEND_URL!)
 echo.
 echo  To stop: close both windows.
 echo.
-echo  Demo login:
-echo    Email:    mariam@student.aiu.edu.eg
-echo    Password: demo1234
-echo.
-echo  Or sign up with a new email to start fresh.
+echo  Sign up at !FRONTEND_URL!/signup to create an account.
+echo  Or log in if you already have one.
 echo ============================================================
 echo.
-echo  This window will close in 10 seconds...
-timeout /t 10 /nobreak >nul
+pause
 exit /b 0
 
 :ERR_PYTHON

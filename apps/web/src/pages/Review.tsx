@@ -20,7 +20,7 @@ export default function Review() {
     try {
       const s = student ?? (await getStudent());
       if (!student) setStudent(s);
-      const activeCompetency = s.competencies.find((c) => c.status === 'DEVELOPING') ?? s.competencies[0];
+      const activeCompetency = s.competencies.find((c) => c.status === 'DEVELOPING') ?? s.competencies[0]!;
       const review = await getReview(activeCompetency.id);
       setState({ status: 'success', data: review });
     } catch (err) {

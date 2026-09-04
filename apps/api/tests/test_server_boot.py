@@ -20,11 +20,15 @@ def test_app_is_a_fastapi_instance() -> None:
     assert isinstance(app, FastAPI)
 
 
-def _signup(client: TestClient, email: str = "boot-test@example.com", password: str = "testpassword123") -> str:
+def _signup(client: TestClient, email: str = "", password: str = "TestPass!123") -> str:
     """Sign up a fresh user and return the JWT."""
+    import time
+    uniq = str(int(time.time()))
+    if not email:
+        email = f"boot-{uniq}@example.com"
     response = client.post(
         "/api/auth/signup",
-        json={"name": "Boot Test", "email": email, "password": password},
+        json={"name": "Boot Test", "username": f"boot{uniq}", "email": email, "password": password},
     )
     assert response.status_code == 200, f"signup failed: {response.text}"
     return response.json()["access_token"]
@@ -33,7 +37,7 @@ def _signup(client: TestClient, email: str = "boot-test@example.com", password: 
 def test_app_exposes_compass_routes() -> None:
     """``/api/competencies`` is now JWT-protected — sign up + GET with token."""
     client = TestClient(app)
-    token = _signup(client, email="compass-routes@example.com")
+    token = _signup(client)
     response = client.get(
         "/api/competencies",
         headers={"Authorization": f"Bearer {token}"},

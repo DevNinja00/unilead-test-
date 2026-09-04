@@ -31,6 +31,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     Enum as SAEnum,
+    Index,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -110,11 +111,14 @@ class CompetencySnapshot(Base):
     """Per-student, per-competency status + progress (current view)."""
 
     __tablename__ = "competency_snapshots"
-    __table_args__ = (UniqueConstraint("student_id", "competency_id", name="uq_student_competency"),)
+    __table_args__ = (
+        UniqueConstraint("student_id", "competency_id", name="uq_student_competency"),
+        Index("ix_cs_student_status", "student_id", "status"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     student_id: Mapped[str] = mapped_column(String(64), ForeignKey("students.student_id"), nullable=False, index=True)
-    competency_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    competency_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     competency_name: Mapped[str] = mapped_column(String(255), nullable=False)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="not_started")
     progress: Mapped[int] = mapped_column(Integer, default=0, nullable=False)

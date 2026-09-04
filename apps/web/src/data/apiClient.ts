@@ -4,8 +4,10 @@
 //
 // Auth: if a JWT is stored in localStorage (under ``unilead_token``), it's
 // automatically attached to every request via the Authorization header.
+// On 401 Unauthorized the token is cleared and the user is redirected
+// to the login page so expired sessions don't silently fail.
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:8000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api';
 
 const TOKEN_KEY = 'unilead_token';
 
@@ -33,7 +35,16 @@ function buildHeaders(extra?: HeadersInit): HeadersInit {
   return headers;
 }
 
+function redirectToLogin(): void {
+  clearAuthToken();
+  window.location.href = '/login';
+}
+
 async function handleResponse<T>(res: Response): Promise<T> {
+  if (res.status === 401) {
+    redirectToLogin();
+    throw new Error('Session expired. Please log in again.');
+  }
   if (!res.ok) {
     let detail = res.statusText;
     try {
@@ -65,6 +76,20 @@ export async function apiPost<T>(path: string, body: unknown): Promise<T> {
   try {
     res = await fetch(`${API_BASE_URL}${path}`, {
       method: 'POST',
+      headers: buildHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new Error('Could not reach the server. Is the backend running?');
+  }
+  return handleResponse<T>(res);
+}
+
+export async function apiPut<T>(path: string, body: unknown): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE_URL}${path}`, {
+      method: 'PUT',
       headers: buildHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(body),
     });

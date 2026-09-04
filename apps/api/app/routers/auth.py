@@ -44,8 +44,25 @@ _signup_attempts: dict[str, list[float]] = defaultdict(list)
 _SIGNUP_MAX_ATTEMPTS = 3
 _SIGNUP_WINDOW_SECONDS = 3600
 
+# --- Max IPs tracked to prevent memory exhaustion -------------------------
+_MAX_TRACKED_IPS = 10_000
+
+
+def _sweep_expired(attempts: dict[str, list[float]], window: float) -> None:
+    """Remove expired entries and cap dict size to prevent memory exhaustion."""
+    now = time.monotonic()
+    expired = [ip for ip, times in attempts.items() if not times or now - times[-1] >= window]
+    for ip in expired:
+        del attempts[ip]
+    # If still too many IPs, evict oldest
+    if len(attempts) > _MAX_TRACKED_IPS:
+        sorted_ips = sorted(attempts, key=lambda ip: attempts[ip][-1] if attempts[ip] else 0)
+        for ip in sorted_ips[: len(sorted_ips) - _MAX_TRACKED_IPS]:
+            del attempts[ip]
+
 
 def _check_login_rate_limit(ip: str) -> None:
+    _sweep_expired(_login_attempts, _LOGIN_WINDOW_SECONDS)
     now = time.monotonic()
     _login_attempts[ip] = [t for t in _login_attempts[ip] if now - t < _LOGIN_WINDOW_SECONDS]
     if len(_login_attempts[ip]) >= _LOGIN_MAX_ATTEMPTS:
@@ -61,6 +78,7 @@ def _record_login_attempt(ip: str) -> None:
 
 
 def _check_signup_rate_limit(ip: str) -> None:
+    _sweep_expired(_signup_attempts, _SIGNUP_WINDOW_SECONDS)
     now = time.monotonic()
     _signup_attempts[ip] = [t for t in _signup_attempts[ip] if now - t < _SIGNUP_WINDOW_SECONDS]
     if len(_signup_attempts[ip]) >= _SIGNUP_MAX_ATTEMPTS:

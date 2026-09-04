@@ -1,5 +1,7 @@
 """Transfer router — presents a transfer task and evaluates the response."""
 
+import logging
+
 from fastapi import APIRouter, Depends, Path, Request
 
 from ..auth.dependencies import get_current_student
@@ -12,6 +14,7 @@ from ..schemas.transfer import (
 from ..services import transfer_service
 
 router = APIRouter(prefix="/api/transfer", tags=["transfer"])
+_log = logging.getLogger("unilead.transfer")
 
 
 @router.get("/{competency_id}", response_model=TransferScenarioResponse)
@@ -24,6 +27,7 @@ def get_transfer_scenario(
     """Present a transfer task (Plant B) for the given competency, scoped
     to the current student's evidence history.
     """
+    _log.info("transfer scenario requested student=%s competency=%s", current_student.student_id, competency_id)
     return transfer_service.get_scenario(competency_id, scenario_id, http_request, current_student.student_id)
 
 
@@ -35,6 +39,7 @@ def evaluate_transfer(
     current_student: Student = Depends(get_current_student),
 ) -> dict:
     """Evaluate the student's free-text response to a transfer prompt."""
+    _log.info("transfer evaluation student=%s competency=%s", current_student.student_id, competency_id)
     return transfer_service.evaluate_response(
         competency_id, request, http_request, current_student.student_id
     )

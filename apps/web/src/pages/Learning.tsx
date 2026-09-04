@@ -20,7 +20,7 @@ export default function Learning() {
     setState({ status: 'loading' });
     try {
       const s = student ?? (await getStudent());
-      const activeCompetency = s.competencies.find((c) => c.status === 'DEVELOPING') ?? s.competencies[0];
+      const activeCompetency = s.competencies.find((c) => c.status === 'DEVELOPING') ?? s.competencies[0]!;
       const sections = await getLesson(activeCompetency.id);
       if (!student) setStudent(s);
       setState({ status: 'success', data: { student: s, sections } });
@@ -54,7 +54,7 @@ export default function Learning() {
   }
 
   const { student: s, sections } = state.data;
-  const activeCompetency = s.competencies.find((c) => c.status === 'DEVELOPING') ?? s.competencies[0];
+  const activeCompetency = s.competencies.find((c) => c.status === 'DEVELOPING') ?? s.competencies[0]!;
 
   return (
     <div className="page learning">

@@ -62,7 +62,7 @@ export default function Onboarding() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
 
-  const current = QUESTIONS[step];
+  const current = QUESTIONS[step]!;
   const isLast = step === QUESTIONS.length - 1;
   const selected = answers[current.key];
 

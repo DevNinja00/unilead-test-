@@ -46,7 +46,7 @@ function PersonalizedContent({
 }) {
   const navigate = useNavigate();
   const currentCompetency =
-    student.competencies.find((c) => c.status === 'DEVELOPING') ?? student.competencies[0];
+    student.competencies.find((c) => c.status === 'DEVELOPING') ?? student.competencies[0]!;
 
   return (
     <Card padding="lg" className="personalized__card">
