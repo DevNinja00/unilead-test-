@@ -1,15 +1,17 @@
 # Unilead API (apps/api) - Python dependencies
 
 # Web framework
-fastapi==0.115.6
+fastapi==0.139.1
 uvicorn[standard]==0.32.1
 
 # Validation + settings
 pydantic==2.10.3
 pydantic-settings>=2.5.0
 
-# HTTP client (used by FastAPI's TestClient)
+# HTTP client: httpx2 is used by Starlette's TestClient (1.3+); plain httpx
+# is still required by ai_education (AsyncClient for Ollama/OpenAI providers).
 httpx==0.28.1
+httpx2==2.12.0
 
 # Database (SQLite via SQLAlchemy 2.0 sync API)
 sqlalchemy>=2.0,<3.0
