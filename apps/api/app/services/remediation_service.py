@@ -25,10 +25,13 @@ from . import ai_education_bridge
 _log = logging.getLogger("unilead.remediation")
 
 
-def _persist_plan(*, competency_id, plan, summary, conceptual_focus, guided_question, student_id) -> None:
+def _persist_plan(
+    *, competency_id, plan, summary, conceptual_focus, guided_question, student_id
+) -> None:
     """Persist the remediation plan to the DB (best-effort)."""
     try:
         from ..db import SessionLocal, crud
+
         db = SessionLocal()
         try:
             crud.save_remediation_plan(
@@ -36,7 +39,9 @@ def _persist_plan(*, competency_id, plan, summary, conceptual_focus, guided_ques
                 student_id=student_id,
                 competency_id=competency_id,
                 detected_misconception=summary.detected_misconception,
-                recommended_action=plan.action.value if hasattr(plan.action, "value") else str(plan.action),
+                recommended_action=plan.action.value
+                if hasattr(plan.action, "value")
+                else str(plan.action),
                 conceptual_focus=conceptual_focus,
                 guided_question=guided_question,
                 consecutive_failures=summary.consecutive_failures,

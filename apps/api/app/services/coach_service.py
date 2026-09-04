@@ -27,7 +27,6 @@ _log = logging.getLogger("unilead.coach")
 
 if TYPE_CHECKING:
     from ai_education.coach.orchestrator import AICoachOrchestrator
-    from ai_education.domain.enums import CoachMode
 
 
 # Map CoachMode strings (from the request schema) → CoachMode enum values.
@@ -76,7 +75,7 @@ async def process_turn(request_data, http_request: Request, student_id: str) -> 
     """Process one coach turn via the AI Education orchestrator for the
     given student_id."""
     gateway = ai_education_bridge.get_gateway(http_request, student_id)
-    orchestrator: "AICoachOrchestrator" = gateway.orchestrator
+    orchestrator: AICoachOrchestrator = gateway.orchestrator
 
     # Resolve target competency
     compass_comp_id = request_data.competency_id
@@ -107,7 +106,7 @@ async def process_turn(request_data, http_request: Request, student_id: str) -> 
         _log.warning("Coach orchestrator failed, using fallback script", exc_info=True)
         idx = _next_turn_index(student_id) - 1
         coach_message = COACH_SCRIPT[min(idx, len(COACH_SCRIPT) - 1)]
-        active_mode = (mode_enum.name if mode_enum else "PRACTICE")
+        active_mode = mode_enum.name if mode_enum else "PRACTICE"
         suggested_actions = []
 
     # Determine scaffolding level
@@ -122,7 +121,9 @@ async def process_turn(request_data, http_request: Request, student_id: str) -> 
 
     manager = gateway.student_manager
     record = manager.profile.competencies.get(mec271_comp_id)
-    finished = bool(record and record.state in (CompetencyState.DEMONSTRATED, CompetencyState.MASTERED))
+    finished = bool(
+        record and record.state in (CompetencyState.DEMONSTRATED, CompetencyState.MASTERED)
+    )
     if finished:
         _reset_turn_index(student_id)
 
@@ -130,13 +131,12 @@ async def process_turn(request_data, http_request: Request, student_id: str) -> 
 
     # Append an evidence timeline event so the Evidence Timeline UI shows
     # the coach interaction.
-    from . import student_state
     student_state.append_evidence_event(
         student_id=student_id,
         event_type="coach_turn",
         title=f"Coach turn ({active_mode})",
         detail=(
-            f"Student asked: \"{_sanitize_log_input(request_data.message[:80])}\". "
+            f'Student asked: "{_sanitize_log_input(request_data.message[:80])}". '
             f"Coach replied ({len(coach_message)} chars, scaffolding={scaffolding})."
         ),
         result="INFO",
@@ -146,6 +146,7 @@ async def process_turn(request_data, http_request: Request, student_id: str) -> 
     # Persist the coach turn to the DB (conversation + messages).
     try:
         from ..db import SessionLocal, crud
+
         db = SessionLocal()
         try:
             # Find or create the student's latest conversation.

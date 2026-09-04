@@ -1,5 +1,6 @@
 """DB package — re-exports the engine, Base, session, and models."""
 
+from . import models
 from .database import (
     Base,
     SessionLocal,
@@ -8,7 +9,6 @@ from .database import (
     get_db,
     seed_default_students_if_empty,
 )
-from . import models
 
 __all__ = [
     "Base",

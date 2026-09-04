@@ -1,9 +1,6 @@
 """Shared test fixtures for the Unilead API test suite."""
 
 import pytest
-from fastapi.testclient import TestClient
-
-from app.main import app
 
 
 @pytest.fixture(autouse=True)

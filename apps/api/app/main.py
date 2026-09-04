@@ -23,6 +23,16 @@ from __future__ import annotations
 
 from pathlib import Path
 
+# AI Education gateway wiring
+from ai_education import (
+    AICoachOrchestrator,
+    EvidenceReasoningEngine,
+    StudentModelManager,
+)
+from ai_education.api.router import APIGateway, build_router
+from ai_education.llm import MockLLMProvider, OllamaProvider, OpenAIProvider
+from ai_education.llm.base import LLMProvider
+from ai_education.llm.config import LLMConfig
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -47,17 +57,6 @@ from .routers import (
     simulation,
     transfer,
 )
-
-# AI Education gateway wiring
-from ai_education import (
-    AICoachOrchestrator,
-    EvidenceReasoningEngine,
-    StudentModelManager,
-)
-from ai_education.api.router import APIGateway, build_router
-from ai_education.llm import MockLLMProvider, OllamaProvider, OpenAIProvider
-from ai_education.llm.base import LLMProvider
-from ai_education.llm.config import LLMConfig
 
 __all__ = ["app", "build_provider", "build_singletons"]
 
@@ -96,9 +95,7 @@ def build_singletons(
         settings.student_id, course_id=settings.course_id
     )
     provider = build_provider(settings)
-    orchestrator = AICoachOrchestrator(
-        student_manager=manager, llm_provider=provider
-    )
+    orchestrator = AICoachOrchestrator(student_manager=manager, llm_provider=provider)
     reasoning_engine = EvidenceReasoningEngine()
     return manager, orchestrator, reasoning_engine, provider
 
@@ -132,6 +129,7 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type", "Accept"],
 )
 
+
 # --- Security headers middleware -------------------------------------------
 @app.middleware("http")
 async def add_security_headers(request, call_next):
@@ -140,10 +138,13 @@ async def add_security_headers(request, call_next):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'"
+    )
     response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), payment=()"
     return response
+
 
 # --- Database: create tables on startup (no demo seeds) ---------------
 from .db import create_all_tables, seed_default_students_if_empty  # noqa: E402
@@ -204,16 +205,22 @@ app.include_router(
 
 
 # --- Startup assertion: JWT secret must be changed from default -----------
-_DEFAULT_JWT_SECRETS = {"change-me-in-production-please-use-a-long-random-string", "dev-secret-change-me"}
+_DEFAULT_JWT_SECRETS = {
+    "change-me-in-production-please-use-a-long-random-string",
+    "dev-secret-change-me",
+}
 if settings.jwt_secret in _DEFAULT_JWT_SECRETS:
     import logging
+
     _log = logging.getLogger("unilead.main")
     if settings.enforce_jwt_secret:
         _log.critical(
             "JWT_SECRET is using a default value. Set JWT_SECRET env var to a "
             "strong random string and set ENFORCE_JWT_SECRET=true."
         )
-        raise SystemExit("Refusing to start with default JWT secret. Set JWT_SECRET to a strong random value.")
+        raise SystemExit(
+            "Refusing to start with default JWT secret. Set JWT_SECRET to a strong random value."
+        )
     _log.warning(
         "JWT_SECRET is using a default value — set JWT_SECRET env var to a "
         "strong random string in production!"
@@ -240,7 +247,9 @@ def healthz() -> dict:
 def readyz() -> dict:
     """Readiness probe — verifies DB connectivity."""
     from sqlalchemy import text
+
     from .db import SessionLocal
+
     try:
         with SessionLocal() as session:
             session.execute(text("SELECT 1"))

@@ -10,29 +10,29 @@ handler.
 
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
 # Mirrors ai_education.domain.enums.CoachMode — duplicated here so the
 # Compass schema layer doesn't need to import the engine package.
-CoachModeLiteral = Literal[
-    "LEARN", "HINT", "PRACTICE", "REFLECT", "REMEDIATE", "TRANSFER"
-]
+CoachModeLiteral = Literal["LEARN", "HINT", "PRACTICE", "REFLECT", "REMEDIATE", "TRANSFER"]
 
 
 class CoachRequest(BaseModel):
     """One coach turn from the student."""
 
-    message: str = Field(..., min_length=1, max_length=4000, description="The student's message to the coach.")
-    mode: Optional[CoachModeLiteral] = Field(
+    message: str = Field(
+        ..., min_length=1, max_length=4000, description="The student's message to the coach."
+    )
+    mode: CoachModeLiteral | None = Field(
         default=None,
         description=(
             "Optional explicit coach mode. If omitted, the reasoning engine "
             "picks one based on the student's evidence history."
         ),
     )
-    competency_id: Optional[str] = Field(
+    competency_id: str | None = Field(
         default=None,
         max_length=64,
         description=(
@@ -46,14 +46,12 @@ class CoachResponse(BaseModel):
     """The coach's reply after one turn."""
 
     message: str = Field(..., description="The coach's reply text.")
-    active_mode: CoachModeLiteral = Field(
-        ..., description="The mode that handled this turn."
-    )
-    target_competency_id: Optional[str] = Field(
+    active_mode: CoachModeLiteral = Field(..., description="The mode that handled this turn.")
+    target_competency_id: str | None = Field(
         default=None,
         description="Compass competency id the coach is currently targeting.",
     )
-    scaffolding_level: Optional[str] = Field(
+    scaffolding_level: str | None = Field(
         default=None,
         description="Adaptive scaffolding level (LOW / MEDIUM / HIGH).",
     )
@@ -69,8 +67,7 @@ class CoachResponse(BaseModel):
     total_turns: int = Field(
         default=0,
         description=(
-            "Total turns in the current scripted flow (0 means free-form, "
-            "no fixed script)."
+            "Total turns in the current scripted flow (0 means free-form, no fixed script)."
         ),
     )
     finished: bool = Field(

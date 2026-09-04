@@ -27,7 +27,9 @@ _log = logging.getLogger("unilead.transfer")
 DEFAULT_SCENARIO = "industrial_oven"
 
 
-def get_scenario(competency_id: str, scenario_id: str | None, http_request: Request, student_id: str) -> dict:
+def get_scenario(
+    competency_id: str, scenario_id: str | None, http_request: Request, student_id: str
+) -> dict:
     """Build a transfer scenario prompt for the given competency for ``student_id``."""
     from ai_education.transfer.engine import TransferAssessmentEngine
     from ai_education.transfer.scenarios import get_transfer_scenario
@@ -89,7 +91,6 @@ def evaluate_response(
 
     gateway = ai_education_bridge.get_gateway(http_request, student_id)
     mec271_id = ai_education_bridge.compass_id_to_mec271(competency_id)
-    manager = gateway.student_manager
 
     scenario = get_transfer_scenario(request_data.scenario_id)
     if scenario is None:
@@ -111,6 +112,7 @@ def evaluate_response(
 
     # Record an evidence timeline event for the transfer evaluation.
     from . import student_state
+
     student_state.sync_default_student_snapshot()
     student_state.append_evidence_event(
         student_id=student_id,
@@ -128,6 +130,7 @@ def evaluate_response(
     # Persist the transfer evaluation to the DB.
     try:
         from ..db import SessionLocal, crud
+
         db = SessionLocal()
         try:
             crud.save_transfer_evaluation(
@@ -145,7 +148,9 @@ def evaluate_response(
         finally:
             db.close()
     except Exception:
-        _log.warning("Failed to persist transfer evaluation for student=%s", student_id, exc_info=True)
+        _log.warning(
+            "Failed to persist transfer evaluation for student=%s", student_id, exc_info=True
+        )
 
     return TransferEvaluationResponse(
         competency_id=competency_id,

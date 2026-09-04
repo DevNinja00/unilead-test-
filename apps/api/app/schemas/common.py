@@ -1,9 +1,9 @@
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel
 
 
-class CompetencyStatus(str, Enum):
+class CompetencyStatus(StrEnum):
     not_started = "not_started"
     needs_practice = "needs_practice"
     developing = "developing"

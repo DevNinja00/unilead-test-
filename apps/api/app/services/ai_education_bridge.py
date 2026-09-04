@@ -20,14 +20,12 @@ from typing import TYPE_CHECKING
 
 from fastapi import Request
 
-from . import student_state
 from .mock_data import INITIAL_COMPETENCIES
 
 _log = logging.getLogger("unilead.ai_education_bridge")
 
 if TYPE_CHECKING:
     from ai_education.api.router import APIGateway
-    from ai_education.domain.enums import CompetencyState
 
 # --- Competency ID mapping ------------------------------------------------
 # Compass IDs (kebab-case, frontend-facing) ↔ MEC271 node IDs (AI Education).
@@ -62,7 +60,7 @@ def is_valid_competency_id(compass_id: str) -> bool:
     return compass_id in _KNOWN_COMPASS_IDS
 
 
-def get_gateway(request: Request, student_id: str | None = None) -> "APIGateway":
+def get_gateway(request: Request, student_id: str | None = None) -> APIGateway:
     """Return the AI Education gateway for ``student_id``.
 
     If ``student_id`` is None, falls back to the legacy default gateway on
@@ -98,7 +96,7 @@ def mec271_id_to_compass(mec271_id: str) -> str:
     return MEC271_TO_COMPASS.get(mec271_id, mec271_id)
 
 
-def compass_status_from_manager(compass_id: str, gateway: "APIGateway") -> str:
+def compass_status_from_manager(compass_id: str, gateway: APIGateway) -> str:
     """Look up the current Compass status for ``compass_id`` based on the
     AI Education manager's profile, deriving ``needs_practice`` from the
     reasoning engine's consecutive-failure count.
@@ -129,7 +127,7 @@ def compass_status_from_manager(compass_id: str, gateway: "APIGateway") -> str:
     return base
 
 
-def compass_progress_from_manager(compass_id: str, gateway: "APIGateway") -> int:
+def compass_progress_from_manager(compass_id: str, gateway: APIGateway) -> int:
     """Derive a 0-100 progress number from the AI Education record state and
     evidence history. Used to refresh the Compass ``student_state`` after a
     simulation or transfer event.
@@ -141,9 +139,7 @@ def compass_progress_from_manager(compass_id: str, gateway: "APIGateway") -> int
         return 0
 
     state = record.state.name
-    passes = sum(
-        1 for e in record.evidence_history if e.requirements_met
-    )
+    passes = sum(1 for e in record.evidence_history if e.requirements_met)
     attempts = len(record.evidence_history)
 
     if state == "MASTERED":
@@ -159,7 +155,7 @@ def compass_progress_from_manager(compass_id: str, gateway: "APIGateway") -> int
     return 0
 
 
-def sync_compass_state_from_manager(gateway: "APIGateway", student_id: str | None = None) -> None:
+def sync_compass_state_from_manager(gateway: APIGateway, student_id: str | None = None) -> None:
     """Refresh the Compass ``student_state`` (DB-backed) from the AI
     Education manager. Call this after every event that mutates the manager
     (simulation run, transfer evaluation, diagnostic submission).
@@ -172,6 +168,7 @@ def sync_compass_state_from_manager(gateway: "APIGateway", student_id: str | Non
         student_id = gateway.student_manager.profile.student_id
     try:
         from ..db import SessionLocal, crud
+
         db = SessionLocal()
         try:
             competencies = crud.get_competencies(db, student_id)
@@ -210,7 +207,7 @@ def sync_compass_state_from_manager(gateway: "APIGateway", student_id: str | Non
         _log.warning("sync_compass_state failed", exc_info=True)
 
 
-def active_compass_competency_id(gateway: "APIGateway") -> str:
+def active_compass_competency_id(gateway: APIGateway) -> str:
     """Return the Compass competency id the AI Education manager is currently
     targeting. Falls back to the first non-demonstrated Compass competency
     if the manager doesn't have a target.

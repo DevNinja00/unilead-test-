@@ -11,16 +11,14 @@ inside a ``with db:`` block (or use ``Depends(get_db)`` in routers).
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from . import models
 
-
 # ---- User ----------------------------------------------------------------
+
 
 def create_user(
     db: Session,
@@ -28,7 +26,7 @@ def create_user(
     email: str,
     username: str,
     name: str,
-    password_hash: Optional[str] = None,
+    password_hash: str | None = None,
 ) -> models.User:
     user = models.User(email=email, username=username, name=name, password_hash=password_hash)
     db.add(user)
@@ -36,19 +34,20 @@ def create_user(
     return user
 
 
-def get_user_by_email(db: Session, email: str) -> Optional[models.User]:
+def get_user_by_email(db: Session, email: str) -> models.User | None:
     return db.query(models.User).filter(models.User.email == email).first()
 
 
-def get_user_by_username(db: Session, username: str) -> Optional[models.User]:
+def get_user_by_username(db: Session, username: str) -> models.User | None:
     return db.query(models.User).filter(models.User.username == username).first()
 
 
-def get_user_by_id(db: Session, user_id: int) -> Optional[models.User]:
+def get_user_by_id(db: Session, user_id: int) -> models.User | None:
     return db.query(models.User).filter(models.User.id == user_id).first()
 
 
 # ---- Student --------------------------------------------------------------
+
 
 def create_student(
     db: Session,
@@ -73,7 +72,7 @@ def create_student(
     return student
 
 
-def get_student_by_id(db: Session, student_id: str) -> Optional[models.Student]:
+def get_student_by_id(db: Session, student_id: str) -> models.Student | None:
     return db.query(models.Student).filter(models.Student.student_id == student_id).first()
 
 
@@ -92,6 +91,7 @@ def update_student_progress(db: Session, student_id: str, overall_progress: int)
 
 
 # ---- Competency snapshot --------------------------------------------------
+
 
 def get_competencies(db: Session, student_id: str) -> list[models.CompetencySnapshot]:
     return (
@@ -143,6 +143,7 @@ def upsert_competency(
 
 # ---- Onboarding -----------------------------------------------------------
 
+
 def save_onboarding(
     db: Session,
     *,
@@ -178,6 +179,7 @@ def save_onboarding(
 
 # ---- Diagnostic -----------------------------------------------------------
 
+
 def save_diagnostic_submission(
     db: Session,
     *,
@@ -212,6 +214,7 @@ def save_diagnostic_submission(
 
 # ---- Simulation -----------------------------------------------------------
 
+
 def save_simulation_run(
     db: Session,
     *,
@@ -229,7 +232,7 @@ def save_simulation_run(
     steady_state_error: float,
     requirements_met: bool,
     result: str,
-    misconception: Optional[str],
+    misconception: str | None,
 ) -> models.SimulationRun:
     run = models.SimulationRun(
         student_id=student_id,
@@ -254,7 +257,7 @@ def save_simulation_run(
 
 
 def list_simulation_runs(
-    db: Session, student_id: str, competency_id: Optional[str] = None
+    db: Session, student_id: str, competency_id: str | None = None
 ) -> list[models.SimulationRun]:
     q = db.query(models.SimulationRun).filter(models.SimulationRun.student_id == student_id)
     if competency_id:
@@ -263,6 +266,7 @@ def list_simulation_runs(
 
 
 # ---- Transfer -------------------------------------------------------------
+
 
 def save_transfer_evaluation(
     db: Session,
@@ -293,12 +297,13 @@ def save_transfer_evaluation(
 
 # ---- Remediation ----------------------------------------------------------
 
+
 def save_remediation_plan(
     db: Session,
     *,
     student_id: str,
     competency_id: str,
-    detected_misconception: Optional[str],
+    detected_misconception: str | None,
     recommended_action: str,
     conceptual_focus: str,
     guided_question: str,
@@ -326,11 +331,12 @@ def save_remediation_plan(
 
 # ---- Coach conversations --------------------------------------------------
 
+
 def create_conversation(
     db: Session,
     *,
     student_id: str,
-    competency_id: Optional[str],
+    competency_id: str | None,
     initial_mode: str,
 ) -> models.CoachConversation:
     conv = models.CoachConversation(
@@ -349,8 +355,8 @@ def add_message(
     conversation_id: int,
     sender: str,
     text: str,
-    mode: Optional[str] = None,
-    scaffolding_level: Optional[str] = None,
+    mode: str | None = None,
+    scaffolding_level: str | None = None,
 ) -> models.CoachMessage:
     msg = models.CoachMessage(
         conversation_id=conversation_id,
@@ -364,9 +370,7 @@ def add_message(
     return msg
 
 
-def get_latest_conversation(
-    db: Session, student_id: str
-) -> Optional[models.CoachConversation]:
+def get_latest_conversation(db: Session, student_id: str) -> models.CoachConversation | None:
     return (
         db.query(models.CoachConversation)
         .filter(models.CoachConversation.student_id == student_id)
@@ -386,6 +390,7 @@ def list_conversations(db: Session, student_id: str) -> list[models.CoachConvers
 
 # ---- Evidence events ------------------------------------------------------
 
+
 def append_evidence_event(
     db: Session,
     *,
@@ -394,8 +399,8 @@ def append_evidence_event(
     title: str,
     detail: str,
     result: str = "INFO",
-    competency_id: Optional[str] = None,
-    timestamp: Optional[datetime] = None,
+    competency_id: str | None = None,
+    timestamp: datetime | None = None,
 ) -> models.EvidenceEvent:
     ev = models.EvidenceEvent(
         student_id=student_id,
@@ -404,7 +409,7 @@ def append_evidence_event(
         detail=detail,
         result=result,
         competency_id=competency_id,
-        timestamp=timestamp or datetime.now(timezone.utc).replace(tzinfo=None),
+        timestamp=timestamp or datetime.now(UTC).replace(tzinfo=None),
     )
     db.add(ev)
     db.flush()

@@ -76,7 +76,22 @@ export default function EvidenceTimeline() {
   }
 
   useEffect(() => {
-    load();
+    let cancelled = false;
+    void (async () => {
+      try {
+        const evs = await getMyEvidenceTimeline();
+        if (cancelled) return;
+        setEvents(evs);
+        setPhase(evs.length === 0 ? 'empty' : 'success');
+      } catch (err) {
+        if (cancelled) return;
+        setErrorMessage(err instanceof Error ? err.message : 'Could not load the timeline.');
+        setPhase('error');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (

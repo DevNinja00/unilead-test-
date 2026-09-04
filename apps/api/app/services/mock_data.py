@@ -13,11 +13,21 @@ COURSE_TITLE = "Automatic Control"
 # earned through the loop (diagnostic → learn → practice → simulation →
 # transfer). The Compass services read+write this to the DB.
 INITIAL_COMPETENCIES = [
-    {"id": "feedback-fundamentals", "name": "Feedback Fundamentals", "status": "not_started", "progress": 0},
+    {
+        "id": "feedback-fundamentals",
+        "name": "Feedback Fundamentals",
+        "status": "not_started",
+        "progress": 0,
+    },
     {"id": "pid-fundamentals", "name": "PID Fundamentals", "status": "not_started", "progress": 0},
     {"id": "pid-reasoning", "name": "PID Reasoning", "status": "not_started", "progress": 0},
     {"id": "pid-tuning", "name": "PID Tuning", "status": "not_started", "progress": 0},
-    {"id": "response-analysis", "name": "Response Analysis", "status": "not_started", "progress": 0},
+    {
+        "id": "response-analysis",
+        "name": "Response Analysis",
+        "status": "not_started",
+        "progress": 0,
+    },
 ]
 
 INITIAL_OVERALL_PROGRESS = 0
@@ -62,7 +72,10 @@ DIAGNOSTIC_QUESTIONS = [
         "prompt": "What is a common goal when tuning a PID controller?",
         "options": [
             {"id": "a", "label": "Maximize settling time"},
-            {"id": "b", "label": "Meet requirements for overshoot, settling time, and steady-state error"},
+            {
+                "id": "b",
+                "label": "Meet requirements for overshoot, settling time, and steady-state error",
+            },
             {"id": "c", "label": "Remove the integral term entirely"},
             {"id": "d", "label": "Ignore steady-state error"},
         ],

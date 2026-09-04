@@ -93,6 +93,7 @@ def _sanitize_email(email: str) -> str:
     """Strip non-ASCII chars from email to prevent log injection."""
     return email.encode("ascii", "ignore").decode("ascii")
 
+
 # --- Helpers ---------------------------------------------------------------
 
 

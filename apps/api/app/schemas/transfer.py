@@ -9,8 +9,6 @@ response; the ``TransferAssessmentEngine`` evaluates it deterministically
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, Field
 
 
@@ -22,10 +20,14 @@ class TransferScenarioResponse(BaseModel):
     title: str = Field(..., description="Human-readable scenario title.")
     domain: str = Field(..., description="Domain label (e.g. 'thermal', 'fluid', 'aerospace').")
     prompt: str = Field(..., description="The challenge prompt shown to the student.")
-    error_signal_meaning: str = Field(..., description="What the error signal represents in this domain.")
+    error_signal_meaning: str = Field(
+        ..., description="What the error signal represents in this domain."
+    )
     control_output_meaning: str = Field(..., description="What the control output represents.")
     system_inertia: str = Field(..., description="Qualitative description of system inertia.")
-    conceptual_challenge: str = Field(..., description="The reasoning challenge the student must address.")
+    conceptual_challenge: str = Field(
+        ..., description="The reasoning challenge the student must address."
+    )
     # No solution steps are provided — by design.
 
 

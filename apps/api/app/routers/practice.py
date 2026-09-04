@@ -16,5 +16,9 @@ def get_practice_task(
     competency_id: str = Path(..., max_length=64, pattern=r"^[a-zA-Z0-9_-]+$"),
     current_student: Student = Depends(get_current_student),
 ) -> dict:
-    _log.debug("practice task requested student=%s competency=%s", current_student.student_id, competency_id)
+    _log.debug(
+        "practice task requested student=%s competency=%s",
+        current_student.student_id,
+        competency_id,
+    )
     return learning_service.get_practice_task(competency_id)

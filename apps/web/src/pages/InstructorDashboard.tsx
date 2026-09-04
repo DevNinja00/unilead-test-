@@ -45,7 +45,28 @@ export default function InstructorDashboard() {
   }
 
   useEffect(() => {
-    loadData();
+    let cancelled = false;
+    void (async () => {
+      try {
+        const [s, a, stu] = await Promise.all([
+          getInstructorClassSummary(),
+          getInstructorCompetencyAggregate(),
+          getInstructorStudents(),
+        ]);
+        if (cancelled) return;
+        setSummary(s);
+        setAggregate(a);
+        setStudents(stu);
+        setPhase('success');
+      } catch (err) {
+        if (cancelled) return;
+        setErrorMessage(err instanceof Error ? err.message : 'Could not load instructor data.');
+        setPhase('error');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (

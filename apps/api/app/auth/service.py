@@ -7,9 +7,9 @@ standard bcrypt (``$2b$...``).
 
 from __future__ import annotations
 
+import contextlib
 import uuid
-from datetime import datetime, timedelta, timezone
-from typing import Optional
+from datetime import UTC, datetime, timedelta
 
 import bcrypt
 from jose import JWTError, jwt
@@ -31,7 +31,7 @@ def hash_password(plain: str) -> str:
     return hashed.decode("utf-8")
 
 
-def verify_password(plain: str, hashed: Optional[str]) -> bool:
+def verify_password(plain: str, hashed: str | None) -> bool:
     """Verify a password against a stored bcrypt hash."""
     if not hashed:
         return False
@@ -42,7 +42,7 @@ def verify_password(plain: str, hashed: Optional[str]) -> bool:
         return False
 
 
-def verify_password_timing_resistant(plain: str, hashed: Optional[str]) -> bool:
+def verify_password_timing_resistant(plain: str, hashed: str | None) -> bool:
     """Verify password, but always run a dummy bcrypt check when the hash
     is missing or invalid to prevent timing side-channel attacks.
     """
@@ -55,33 +55,29 @@ def verify_password_timing_resistant(plain: str, hashed: Optional[str]) -> bool:
         return bcrypt.checkpw(pw_bytes, hashed.encode("utf-8"))
     except (ValueError, TypeError):
         # Run dummy check on error to avoid leaking timing info
-        try:
+        with contextlib.suppress(Exception):
             bcrypt.hashpw(b"dummy", bcrypt.gensalt(rounds=12))
-        except Exception:
-            pass
         return False
 
 
 # --- JWT -------------------------------------------------------------------
 def create_access_token(
     subject: str,
-    expires_minutes: Optional[int] = None,
+    expires_minutes: int | None = None,
 ) -> str:
     """Issue a JWT for ``subject`` (the user id)."""
-    expire = datetime.now(timezone.utc) + timedelta(
-        minutes=expires_minutes or _settings.jwt_expire_minutes
-    )
+    expire = datetime.now(UTC) + timedelta(minutes=expires_minutes or _settings.jwt_expire_minutes)
     payload = {
         "sub": subject,
         "exp": expire,
-        "iat": datetime.now(timezone.utc),
+        "iat": datetime.now(UTC),
         "iss": "unilead-api",
         "jti": uuid.uuid4().hex,
     }
     return jwt.encode(payload, _settings.jwt_secret, algorithm=_settings.jwt_algorithm)
 
 
-def decode_access_token(token: str) -> Optional[str]:
+def decode_access_token(token: str) -> str | None:
     """Decode a JWT and return the subject (user id as string) or None."""
     try:
         payload = jwt.decode(

@@ -18,20 +18,18 @@ Schema overview:
 
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Optional
+from datetime import UTC, datetime
 
 from sqlalchemy import (
     Boolean,
     DateTime,
     Float,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
     UniqueConstraint,
-    Enum as SAEnum,
-    Index,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -40,8 +38,7 @@ from .database import Base
 
 def _utcnow() -> datetime:
     """Timezone-naive UTC now — matches SQLite's default datetime format."""
-    from datetime import timezone
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class User(Base):
@@ -56,12 +53,12 @@ class User(Base):
     role: Mapped[str] = mapped_column(String(16), nullable=False, default="student")
     # "student" or "instructor" — gates access to instructor endpoints
 
-    password_hash: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     # nullable so seeded demo accounts (without passwords) can exist for read-only views
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
 
-    students: Mapped[list["Student"]] = relationship("Student", back_populates="user")
+    students: Mapped[list[Student]] = relationship("Student", back_populates="user")
 
 
 class Student(Base):
@@ -75,34 +72,36 @@ class Student(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     display_name: Mapped[str] = mapped_column(String(255), nullable=False)
     course_code: Mapped[str] = mapped_column(String(32), nullable=False, default="MEC271")
-    course_title: Mapped[str] = mapped_column(String(255), nullable=False, default="Automatic Control")
+    course_title: Mapped[str] = mapped_column(
+        String(255), nullable=False, default="Automatic Control"
+    )
     overall_progress: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
 
     user: Mapped[User] = relationship("User", back_populates="students")
-    competencies: Mapped[list["CompetencySnapshot"]] = relationship(
+    competencies: Mapped[list[CompetencySnapshot]] = relationship(
         "CompetencySnapshot", back_populates="student", cascade="all, delete-orphan"
     )
-    onboarding: Mapped[Optional["OnboardingAnswer"]] = relationship(
+    onboarding: Mapped[OnboardingAnswer | None] = relationship(
         "OnboardingAnswer", back_populates="student", uselist=False, cascade="all, delete-orphan"
     )
-    diagnostic_submissions: Mapped[list["DiagnosticSubmission"]] = relationship(
+    diagnostic_submissions: Mapped[list[DiagnosticSubmission]] = relationship(
         "DiagnosticSubmission", back_populates="student", cascade="all, delete-orphan"
     )
-    simulation_runs: Mapped[list["SimulationRun"]] = relationship(
+    simulation_runs: Mapped[list[SimulationRun]] = relationship(
         "SimulationRun", back_populates="student", cascade="all, delete-orphan"
     )
-    transfer_evaluations: Mapped[list["TransferEvaluation"]] = relationship(
+    transfer_evaluations: Mapped[list[TransferEvaluation]] = relationship(
         "TransferEvaluation", back_populates="student", cascade="all, delete-orphan"
     )
-    remediation_plans: Mapped[list["RemediationPlan"]] = relationship(
+    remediation_plans: Mapped[list[RemediationPlan]] = relationship(
         "RemediationPlan", back_populates="student", cascade="all, delete-orphan"
     )
-    coach_conversations: Mapped[list["CoachConversation"]] = relationship(
+    coach_conversations: Mapped[list[CoachConversation]] = relationship(
         "CoachConversation", back_populates="student", cascade="all, delete-orphan"
     )
-    evidence_events: Mapped[list["EvidenceEvent"]] = relationship(
+    evidence_events: Mapped[list[EvidenceEvent]] = relationship(
         "EvidenceEvent", back_populates="student", cascade="all, delete-orphan"
     )
 
@@ -117,13 +116,17 @@ class CompetencySnapshot(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    student_id: Mapped[str] = mapped_column(String(64), ForeignKey("students.student_id"), nullable=False, index=True)
+    student_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("students.student_id"), nullable=False, index=True
+    )
     competency_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     competency_name: Mapped[str] = mapped_column(String(255), nullable=False)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="not_started")
     progress: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=_utcnow, onupdate=_utcnow, nullable=False
+    )
 
     student: Mapped[Student] = relationship("Student", back_populates="competencies")
 
@@ -134,7 +137,9 @@ class OnboardingAnswer(Base):
     __tablename__ = "onboarding_answers"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    student_id: Mapped[str] = mapped_column(String(64), ForeignKey("students.student_id"), unique=True, nullable=False)
+    student_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("students.student_id"), unique=True, nullable=False
+    )
     learning_challenge: Mapped[str] = mapped_column(Text, nullable=False)
     preferred_method: Mapped[str] = mapped_column(Text, nullable=False)
     obstacle: Mapped[str] = mapped_column(Text, nullable=False)
@@ -151,7 +156,9 @@ class DiagnosticSubmission(Base):
     __tablename__ = "diagnostic_submissions"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    student_id: Mapped[str] = mapped_column(String(64), ForeignKey("students.student_id"), nullable=False, index=True)
+    student_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("students.student_id"), nullable=False, index=True
+    )
     score: Mapped[int] = mapped_column(Integer, nullable=False)  # correct count
     total: Mapped[int] = mapped_column(Integer, nullable=False)  # total questions
     misconceptions_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
@@ -159,7 +166,7 @@ class DiagnosticSubmission(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
 
     student: Mapped[Student] = relationship("Student", back_populates="diagnostic_submissions")
-    answers: Mapped[list["DiagnosticAnswer"]] = relationship(
+    answers: Mapped[list[DiagnosticAnswer]] = relationship(
         "DiagnosticAnswer", back_populates="submission", cascade="all, delete-orphan"
     )
 
@@ -170,14 +177,18 @@ class DiagnosticAnswer(Base):
     __tablename__ = "diagnostic_answers"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    submission_id: Mapped[int] = mapped_column(ForeignKey("diagnostic_submissions.id"), nullable=False, index=True)
+    submission_id: Mapped[int] = mapped_column(
+        ForeignKey("diagnostic_submissions.id"), nullable=False, index=True
+    )
     question_id: Mapped[str] = mapped_column(String(32), nullable=False)
     competency_id: Mapped[str] = mapped_column(String(64), nullable=False)
     selected_option_id: Mapped[str] = mapped_column(String(32), nullable=False)
     correct: Mapped[bool] = mapped_column(Boolean, nullable=False)
-    misconception_tag: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    misconception_tag: Mapped[str | None] = mapped_column(String(128), nullable=True)
 
-    submission: Mapped[DiagnosticSubmission] = relationship("DiagnosticSubmission", back_populates="answers")
+    submission: Mapped[DiagnosticSubmission] = relationship(
+        "DiagnosticSubmission", back_populates="answers"
+    )
 
 
 class SimulationRun(Base):
@@ -186,7 +197,9 @@ class SimulationRun(Base):
     __tablename__ = "simulation_runs"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    student_id: Mapped[str] = mapped_column(String(64), ForeignKey("students.student_id"), nullable=False, index=True)
+    student_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("students.student_id"), nullable=False, index=True
+    )
     competency_id: Mapped[str] = mapped_column(String(64), nullable=False)
     task_id: Mapped[str] = mapped_column(String(64), nullable=False, default="pid-001")
     attempt: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -206,7 +219,7 @@ class SimulationRun(Base):
     # Outcome
     requirements_met: Mapped[bool] = mapped_column(Boolean, nullable=False)
     result: Mapped[str] = mapped_column(String(8), nullable=False)  # PASS / FAIL
-    misconception: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    misconception: Mapped[str | None] = mapped_column(String(128), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
 
@@ -219,7 +232,9 @@ class TransferEvaluation(Base):
     __tablename__ = "transfer_evaluations"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    student_id: Mapped[str] = mapped_column(String(64), ForeignKey("students.student_id"), nullable=False, index=True)
+    student_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("students.student_id"), nullable=False, index=True
+    )
     competency_id: Mapped[str] = mapped_column(String(64), nullable=False)
     scenario_id: Mapped[str] = mapped_column(String(64), nullable=False)
     response_text: Mapped[str] = mapped_column(Text, nullable=False)
@@ -239,9 +254,11 @@ class RemediationPlan(Base):
     __tablename__ = "remediation_plans"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    student_id: Mapped[str] = mapped_column(String(64), ForeignKey("students.student_id"), nullable=False, index=True)
+    student_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("students.student_id"), nullable=False, index=True
+    )
     competency_id: Mapped[str] = mapped_column(String(64), nullable=False)
-    detected_misconception: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    detected_misconception: Mapped[str | None] = mapped_column(String(128), nullable=True)
     recommended_action: Mapped[str] = mapped_column(String(64), nullable=False)
     conceptual_focus: Mapped[str] = mapped_column(Text, nullable=False)
     guided_question: Mapped[str] = mapped_column(Text, nullable=False)
@@ -261,8 +278,10 @@ class CoachConversation(Base):
     __tablename__ = "coach_conversations"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    student_id: Mapped[str] = mapped_column(String(64), ForeignKey("students.student_id"), nullable=False, index=True)
-    competency_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    student_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("students.student_id"), nullable=False, index=True
+    )
+    competency_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     initial_mode: Mapped[str] = mapped_column(String(32), nullable=False, default="LEARN")
     finished: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
@@ -272,8 +291,10 @@ class CoachConversation(Base):
     )
 
     student: Mapped[Student] = relationship("Student", back_populates="coach_conversations")
-    messages: Mapped[list["CoachMessage"]] = relationship(
-        "CoachMessage", back_populates="conversation", cascade="all, delete-orphan",
+    messages: Mapped[list[CoachMessage]] = relationship(
+        "CoachMessage",
+        back_populates="conversation",
+        cascade="all, delete-orphan",
         order_by="CoachMessage.id",
     )
 
@@ -284,15 +305,19 @@ class CoachMessage(Base):
     __tablename__ = "coach_messages"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    conversation_id: Mapped[int] = mapped_column(ForeignKey("coach_conversations.id"), nullable=False, index=True)
+    conversation_id: Mapped[int] = mapped_column(
+        ForeignKey("coach_conversations.id"), nullable=False, index=True
+    )
     sender: Mapped[str] = mapped_column(String(16), nullable=False)  # "student" / "coach"
     text: Mapped[str] = mapped_column(Text, nullable=False)
-    mode: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
-    scaffolding_level: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
+    mode: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    scaffolding_level: Mapped[str | None] = mapped_column(String(16), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
 
-    conversation: Mapped[CoachConversation] = relationship("CoachConversation", back_populates="messages")
+    conversation: Mapped[CoachConversation] = relationship(
+        "CoachConversation", back_populates="messages"
+    )
 
 
 class EvidenceEvent(Base):
@@ -301,10 +326,14 @@ class EvidenceEvent(Base):
     __tablename__ = "evidence_events"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    student_id: Mapped[str] = mapped_column(String(64), ForeignKey("students.student_id"), nullable=False, index=True)
-    timestamp: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False, index=True)
+    student_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("students.student_id"), nullable=False, index=True
+    )
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime, default=_utcnow, nullable=False, index=True
+    )
     event_type: Mapped[str] = mapped_column(String(64), nullable=False)
-    competency_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    competency_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     detail: Mapped[str] = mapped_column(Text, nullable=False)
     result: Mapped[str] = mapped_column(String(8), nullable=False, default="INFO")

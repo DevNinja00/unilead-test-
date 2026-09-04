@@ -12,7 +12,7 @@ class SignUpRequest(BaseModel):
     password: str = Field(..., min_length=8, max_length=72)
 
     @model_validator(mode="after")
-    def validate_password_strength(self) -> "SignUpRequest":
+    def validate_password_strength(self) -> SignUpRequest:
         pw = self.password
         errors = []
         if not any(c.isupper() for c in pw):

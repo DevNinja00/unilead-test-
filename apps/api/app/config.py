@@ -7,7 +7,7 @@ so the server can be launched identically in dev and deployment.
 """
 
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -16,8 +16,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # apps/api directory: insert the ai_education library directory on sys.path
 # so its package is importable without pip-installing it.
 _APP_DIR = Path(__file__).resolve().parent  # apps/api/app
-_API_DIR = _APP_DIR.parent                   # apps/api
-_REPO_ROOT = _API_DIR.parents[1]             # unilead-unified/
+_API_DIR = _APP_DIR.parent  # apps/api
+_REPO_ROOT = _API_DIR.parents[1]  # unilead-unified/
 _AI_EDUCATION_DIR = _REPO_ROOT / "services" / "ai_education"
 
 import sys  # noqa: E402
@@ -66,8 +66,8 @@ class Settings(BaseSettings):
 
     # --- LLM provider (AI Education gateway) ---
     llm_provider_type: Literal["mock", "ollama", "openai"] = "mock"
-    llm_model: Optional[str] = None
-    openai_api_key: Optional[str] = None
+    llm_model: str | None = None
+    openai_api_key: str | None = None
     openai_base_url: str = "https://api.openai.com/v1"
     ollama_base_url: str = "http://localhost:11434"
 
@@ -78,8 +78,4 @@ class Settings(BaseSettings):
 
 def get_cors_origins() -> list[str]:
     """Return the list of allowed CORS origins (comma-separated string)."""
-    return [
-        origin.strip()
-        for origin in Settings().cors_origins.split(",")
-        if origin.strip()
-    ]
+    return [origin.strip() for origin in Settings().cors_origins.split(",") if origin.strip()]

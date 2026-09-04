@@ -9,18 +9,15 @@ from __future__ import annotations
 
 import collections
 import copy
-from typing import Optional
-
-from sqlalchemy.orm import Session
 
 from ..db import SessionLocal, crud
-from ..db.models import Student
 from .mock_data import INITIAL_COMPETENCIES, INITIAL_OVERALL_PROGRESS
 
 DEFAULT_STUDENT_ID = "api-gateway-student"
 
 
 # --- Internal helpers ------------------------------------------------------
+
 
 def _timeline_for_read(student_id: str) -> list[dict]:
     """Return the student's evidence timeline (newest-first), DB-backed."""
@@ -120,7 +117,12 @@ def bump_competency_progress(
             progress=new_progress,
         )
         db.commit()
-        return {"id": c.competency_id, "name": c.competency_name, "status": c.status, "progress": new_progress}
+        return {
+            "id": c.competency_id,
+            "name": c.competency_name,
+            "status": c.status,
+            "progress": new_progress,
+        }
     finally:
         db.close()
 
@@ -198,7 +200,7 @@ def list_students() -> list[dict]:
         db.close()
 
 
-def get_student_by_id(student_id: str) -> Optional[dict]:
+def get_student_by_id(student_id: str) -> dict | None:
     db = SessionLocal()
     try:
         s = crud.get_student_by_id(db, student_id)
@@ -263,7 +265,7 @@ def append_evidence_event(
     title: str,
     detail: str,
     result: str = "INFO",
-    competency_id: Optional[str] = None,
+    competency_id: str | None = None,
 ) -> None:
     """Append an event to a student's evidence timeline (now DB-backed)."""
     db = SessionLocal()

@@ -23,7 +23,7 @@ jobs:
       - run: python -m pytest tests/ -v --tb=short
       - name: Ruff lint
         run: |
-          pip install ruff
+          pip install ruff==0.16.6
           ruff check app/ tests/
       - name: Ruff format check
         run: ruff format --check app/ tests/

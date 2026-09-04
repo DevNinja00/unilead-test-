@@ -22,5 +22,9 @@ def get_remediation_plan(
     """Build a remediation plan for the given competency using the current
     student's evidence history.
     """
-    _log.info("remediation plan requested student=%s competency=%s", current_student.student_id, competency_id)
+    _log.info(
+        "remediation plan requested student=%s competency=%s",
+        current_student.student_id,
+        competency_id,
+    )
     return remediation_service.build_plan(competency_id, http_request, current_student.student_id)

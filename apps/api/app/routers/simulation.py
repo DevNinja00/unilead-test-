@@ -22,5 +22,11 @@ def run_simulation(
     """Run a PID simulation with the given gains and record the evidence
     for the current student.
     """
-    _log.info("simulation for student=%s kp=%.3f ki=%.3f kd=%.3f", current_student.student_id, request.kp, request.ki, request.kd)
+    _log.info(
+        "simulation for student=%s kp=%.3f ki=%.3f kd=%.3f",
+        current_student.student_id,
+        request.kp,
+        request.ki,
+        request.kd,
+    )
     return simulation_service.run_simulation(request, http_request, current_student.student_id)

@@ -53,11 +53,14 @@ def get_questions() -> list[dict]:
     return DIAGNOSTIC_QUESTIONS
 
 
-def submit_diagnostic(answers: list[dict], http_request: Request | None = None, student_id: str | None = None) -> list[dict]:
+def submit_diagnostic(
+    answers: list[dict], http_request: Request | None = None, student_id: str | None = None
+) -> list[dict]:
     """Score the diagnostic answers, update the AI Education student model,
     and return per-competency results including detected misconceptions.
     """
     from . import student_state as ss
+
     # Resolve student_id: explicit param > DEFAULT_STUDENT_ID
     if student_id is None:
         student_id = ss.get_default_student_id()
@@ -95,7 +98,6 @@ def submit_diagnostic(answers: list[dict], http_request: Request | None = None, 
     # Record an evidence timeline event for the diagnostic submission.
     correct_count = sum(e["correct"] for e in per_comp.values())
     total_count = sum(e["total"] for e in per_comp.values())
-    from . import student_state
     student_state.sync_default_student_snapshot()
     student_state.append_evidence_event(
         student_id=student_id,
@@ -111,21 +113,24 @@ def submit_diagnostic(answers: list[dict], http_request: Request | None = None, 
     # Persist the full submission to the DB (every answer + correct flag).
     try:
         from ..db import SessionLocal, crud
+
         db = SessionLocal()
         try:
             answers_payload = []
             for q in DIAGNOSTIC_QUESTIONS:
                 picked_option = picked.get(q["id"])
                 correct = picked_option == CORRECT_ANSWERS.get(q["id"])
-                answers_payload.append({
-                    "question_id": q["id"],
-                    "competency_id": q["competency_id"],
-                    "selected_option_id": picked_option or "",
-                    "correct": correct,
-                    "misconception_tag": (
-                        QUESTION_MISCONCEPTIONS.get(q["id"]) if not correct else None
-                    ),
-                })
+                answers_payload.append(
+                    {
+                        "question_id": q["id"],
+                        "competency_id": q["competency_id"],
+                        "selected_option_id": picked_option or "",
+                        "correct": correct,
+                        "misconception_tag": (
+                            QUESTION_MISCONCEPTIONS.get(q["id"]) if not correct else None
+                        ),
+                    }
+                )
             crud.save_diagnostic_submission(
                 db,
                 student_id=student_id,
@@ -138,7 +143,9 @@ def submit_diagnostic(answers: list[dict], http_request: Request | None = None, 
         finally:
             db.close()
     except Exception:
-        _log.warning("Failed to persist diagnostic submission for student=%s", student_id, exc_info=True)
+        _log.warning(
+            "Failed to persist diagnostic submission for student=%s", student_id, exc_info=True
+        )
 
     # Compose the response — one entry per competency that has a question.
     results: list[dict] = []
@@ -159,14 +166,15 @@ def submit_diagnostic(answers: list[dict], http_request: Request | None = None, 
     return results
 
 
-def _run_ai_education_diagnostic(per_comp: dict[str, dict], http_request: Request, student_id: str) -> None:
+def _run_ai_education_diagnostic(
+    per_comp: dict[str, dict], http_request: Request, student_id: str
+) -> None:
     """Translate the per-competency accuracy into a DiagnosticEngine run."""
     from ai_education.domain.diagnostic import (
         DiagnosticAssessment,
         DiagnosticEngine,
         DiagnosticItem,
         DiagnosticResponse,
-        DiagnosticResult,
     )
 
     gateway = ai_education_bridge.get_gateway(http_request, student_id)

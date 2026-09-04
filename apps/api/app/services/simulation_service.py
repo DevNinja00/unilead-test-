@@ -121,7 +121,9 @@ def run_simulation(request_data, http_request: Request, student_id: str) -> dict
             manager=gateway.student_manager,
         )
     except Exception:
-        _log.debug("Mastery engine failure should never break the simulation response", exc_info=True)
+        _log.debug(
+            "Mastery engine failure should never break the simulation response", exc_info=True
+        )
 
     # 6) Sync state back to Compass student_state
     ai_education_bridge.sync_compass_state_from_manager(gateway)
@@ -132,6 +134,7 @@ def run_simulation(request_data, http_request: Request, student_id: str) -> dict
     attempt = len(record.evidence_history) if record else 1
 
     from . import student_state
+
     student_state.append_evidence_event(
         student_id=student_id,
         event_type="simulation_run",
@@ -150,6 +153,7 @@ def run_simulation(request_data, http_request: Request, student_id: str) -> dict
     # 6d) Persist the full simulation run to the DB.
     try:
         from ..db import SessionLocal, crud
+
         db = SessionLocal()
         try:
             crud.save_simulation_run(

@@ -8,8 +8,6 @@ attempt number).
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, Field
 
 
@@ -19,7 +17,7 @@ class SimulationRequest(BaseModel):
     kp: float = Field(default=2.0, ge=-100.0, le=100.0, description="Proportional gain.")
     ki: float = Field(default=0.5, ge=-100.0, le=100.0, description="Integral gain.")
     kd: float = Field(default=0.1, ge=-100.0, le=100.0, description="Derivative gain.")
-    competency_id: Optional[str] = Field(
+    competency_id: str | None = Field(
         default="pid-tuning",
         max_length=64,
         description="Compass competency id this simulation is evidence for.",
@@ -44,13 +42,11 @@ class SimulationResult(BaseModel):
     kp: float = Field(..., description="The Kp used in this run.")
     ki: float = Field(..., description="The Ki used in this run.")
     kd: float = Field(..., description="The Kd used in this run.")
-    requirements_met: bool = Field(
-        ..., description="True if all task thresholds were met."
-    )
+    requirements_met: bool = Field(..., description="True if all task thresholds were met.")
     result: str = Field(..., description="'PASS' or 'FAIL'.")
     attempt: int = Field(..., description="1-based attempt number for this competency.")
     competency_id: str = Field(..., description="Compass competency id this run is evidence for.")
-    misconception: Optional[str] = Field(
+    misconception: str | None = Field(
         default=None,
         description="Detected PID misconception (only set on FAIL).",
     )

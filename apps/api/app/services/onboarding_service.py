@@ -13,6 +13,7 @@ def submit_onboarding(answers: dict, student_id: str) -> dict:
     """Persist onboarding answers to the DB and acknowledge receipt."""
     try:
         from ..db import SessionLocal, crud
+
         db = SessionLocal()
         try:
             crud.save_onboarding(

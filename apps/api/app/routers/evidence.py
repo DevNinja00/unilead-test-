@@ -30,5 +30,7 @@ def get_student_timeline(
     current_user: User = Depends(get_current_instructor),
 ) -> list[dict]:
     """Instructor view: return any student's evidence timeline by student_id."""
-    _log.info("evidence timeline requested by instructor=%d for student=%s", current_user.id, student_id)
+    _log.info(
+        "evidence timeline requested by instructor=%d for student=%s", current_user.id, student_id
+    )
     return evidence_service.get_timeline(student_id)

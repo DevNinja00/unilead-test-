@@ -22,11 +22,7 @@ from __future__ import annotations
 
 import logging
 from collections import OrderedDict
-from typing import TYPE_CHECKING, Optional
-
-from fastapi import Request
-
-_log = logging.getLogger("unilead.manager_pool")
+from typing import TYPE_CHECKING
 
 from ai_education import (
     AICoachOrchestrator,
@@ -35,10 +31,12 @@ from ai_education import (
 )
 from ai_education.api.router import APIGateway
 from ai_education.domain.enums import CompetencyState
-from ai_education.llm.base import LLMProvider
+from fastapi import Request
+
+_log = logging.getLogger("unilead.manager_pool")
 
 if TYPE_CHECKING:
-    from sqlalchemy.orm import Session
+    pass
 
 _MAX_POOL_SIZE = 200
 
@@ -121,16 +119,13 @@ def _replay_evidence_from_db(
     timeline (in the DB) is the source of truth for those.
     """
     try:
-        from ..db import SessionLocal, crud, models
         from ai_education.domain.evidence import (
             PIDParameters,
             PracticalEvidence,
             SimulationMetrics,
         )
-        from ai_education.robotics.telemetry import (
-            StepResponseTelemetry,
-            TelemetryThresholds,
-        )
+
+        from ..db import SessionLocal, models
         from ..services.ai_education_bridge import compass_id_to_mec271
 
         db = SessionLocal()
@@ -146,13 +141,6 @@ def _replay_evidence_from_db(
                 record = manager.profile.competencies.get(mec271_id)
                 if record is None:
                     continue
-                telemetry = StepResponseTelemetry(
-                    overshoot_pct=run.overshoot,
-                    settling_time_sec=run.settling_time,
-                    rise_time_sec=run.rise_time,
-                    steady_state_error=run.steady_state_error,
-                    is_stable=run.stable,
-                )
                 evidence = PracticalEvidence(
                     task_id=run.task_id,
                     attempt=run.attempt,

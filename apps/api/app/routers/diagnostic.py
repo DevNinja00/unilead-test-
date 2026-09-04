@@ -27,6 +27,10 @@ def submit_diagnostic(
     http_request: Request,
     current_student: Student = Depends(get_current_student),
 ) -> list[dict]:
-    _log.info("diagnostic submission from student=%s answers=%d", current_student.student_id, len(submission.answers))
+    _log.info(
+        "diagnostic submission from student=%s answers=%d",
+        current_student.student_id,
+        len(submission.answers),
+    )
     answers = [a.model_dump() for a in submission.answers]
     return diagnostic_service.submit_diagnostic(answers, http_request, current_student.student_id)

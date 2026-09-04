@@ -6,8 +6,6 @@ No write operations are exposed here — instructors look, they don't touch.
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, Field
 
 
@@ -53,9 +51,10 @@ class EvidenceEvent(BaseModel):
 
     timestamp: str = Field(..., description="RFC3339 UTC timestamp.")
     event_type: str = Field(
-        ..., description="diagnostic_submitted / simulation_run / remediation_completed / transfer_evaluated / coach_turn."
+        ...,
+        description="diagnostic_submitted / simulation_run / remediation_completed / transfer_evaluated / coach_turn.",
     )
-    competency_id: Optional[str] = None
+    competency_id: str | None = None
     title: str
     detail: str
     result: str = Field(..., description="PASS / FAIL / INFO.")

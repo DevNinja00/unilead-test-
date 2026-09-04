@@ -1,3 +1,4 @@
+// oxlint-disable react/only-export-components -- context module intentionally exports a provider + hook pair
 import type { ReactNode } from 'react';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { Student, DiagnosticResult, OnboardingAnswers, JourneyFlags, AuthSession } from '../types';

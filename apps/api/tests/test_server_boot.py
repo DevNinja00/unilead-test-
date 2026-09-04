@@ -23,6 +23,7 @@ def test_app_is_a_fastapi_instance() -> None:
 def _signup(client: TestClient, email: str = "", password: str = "TestPass!123") -> str:
     """Sign up a fresh user and return the JWT."""
     import time
+
     uniq = str(int(time.time()))
     if not email:
         email = f"boot-{uniq}@example.com"
@@ -78,13 +79,14 @@ def test_root_health_check_reports_both_modules() -> None:
 
 
 def test_build_singletons_returns_all_four_dependencies() -> None:
-    from app.config import Settings
     from ai_education import (
         AICoachOrchestrator,
         EvidenceReasoningEngine,
         StudentModelManager,
     )
     from ai_education.llm.base import LLMProvider
+
+    from app.config import Settings
 
     settings = Settings(llm_provider_type="mock")
     manager, orchestrator, reasoning_engine, provider = build_singletons(settings)
@@ -95,8 +97,9 @@ def test_build_singletons_returns_all_four_dependencies() -> None:
 
 
 def test_environment_drives_provider_selection() -> None:
-    from app.config import Settings
     from ai_education.llm.ollama import OllamaProvider
+
+    from app.config import Settings
 
     settings = Settings(
         llm_provider_type="ollama",

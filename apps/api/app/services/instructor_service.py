@@ -40,18 +40,12 @@ def get_class_summary() -> dict:
     return {
         "total_students": len(students),
         "average_overall_progress": (
-            sum(s["overall_progress"] for s in students) // len(students)
-            if students
-            else 0
+            sum(s["overall_progress"] for s in students) // len(students) if students else 0
         ),
         "students_demonstrated_all": sum(
-            1
-            for s in students
-            if all(c["status"] == "demonstrated" for c in s["competencies"])
+            1 for s in students if all(c["status"] == "demonstrated" for c in s["competencies"])
         ),
         "students_with_failures": sum(
-            1
-            for s in students
-            if any(c["status"] == "needs_practice" for c in s["competencies"])
+            1 for s in students if any(c["status"] == "needs_practice" for c in s["competencies"])
         ),
     }
