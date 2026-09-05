@@ -6,23 +6,28 @@ import sys
 from logging.config import fileConfig
 from pathlib import Path
 
-from alembic import context
 from sqlalchemy import engine_from_config, pool
+
+from alembic import context
 
 # Make sure the app package is importable
 APP_DIR = Path(__file__).resolve().parents[1] / "apps" / "api"
 if str(APP_DIR) not in sys.path:
     sys.path.insert(0, str(APP_DIR))
 
-from app.config import Settings  # noqa: E402
-from app.db.database import Base  # noqa: E402
-from app.db import models  # noqa: E402, F401  (registers tables with Base.metadata)
+from app.config import Settings
+from app.db import models  # noqa: F401  (registers tables with Base.metadata)
+from app.db.database import Base
 
 config = context.config
 
 # Set the SQLAlchemy URL from the app's settings
 settings = Settings()
 config.set_main_option("sqlalchemy.url", settings.database_url)
+
+# SQLite has no native ALTER TABLE; Alembic's batch mode emulates it.
+# PostgreSQL is a no-op for batch mode, so only enable it for SQLite.
+_use_batch = settings.database_url.startswith("sqlite")
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
@@ -37,7 +42,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        render_as_batch=True,  # required for SQLite's ALTER TABLE
+        render_as_batch=_use_batch,
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -53,7 +58,7 @@ def run_migrations_online() -> None:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
-            render_as_batch=True,  # required for SQLite's ALTER TABLE
+            render_as_batch=_use_batch,
         )
         with context.begin_transaction():
             context.run_migrations()

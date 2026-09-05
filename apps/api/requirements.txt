@@ -13,8 +13,10 @@ pydantic-settings>=2.5.0
 httpx==0.28.1
 httpx2==2.12.0
 
-# Database (SQLite via SQLAlchemy 2.0 sync API)
+# Database (SQLAlchemy 2.0 sync API)
+# Default local dev: SQLite (zero-config). Production: PostgreSQL via psycopg3.
 sqlalchemy>=2.0,<3.0
+psycopg[binary]>=3.1
 
 # Password hashing (bcrypt)
 bcrypt>=4.0

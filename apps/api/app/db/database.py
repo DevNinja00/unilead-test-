@@ -1,12 +1,16 @@
 """Database engine + session factory.
 
-Uses SQLAlchemy 2.0 sync API with SQLite by default. The engine is created
-once at import time using the ``DATABASE_URL`` env var (default:
-``sqlite:///./unilead.db``).
+Uses SQLAlchemy 2.0 sync API. The engine is created once at import time
+using the ``DATABASE_URL`` env var.
 
-For SQLite, we enable ``check_same_thread=False`` so FastAPI's threadpool
-can use the same connection safely (SQLite connections are not actually
-shared — each thread gets its own via the session factory).
+- Default (local dev): SQLite — ``sqlite:///./unilead.db`` (zero-config).
+- Production: PostgreSQL — ``postgresql+psycopg://user:pass@host:5432/db``.
+
+Engine tweaks are chosen per dialect: SQLite gets ``check_same_thread=False``
+so FastAPI's threadpool can open per-thread connections; PostgreSQL gets
+``pool_pre_ping=True`` so stale pooled connections are transparently dropped
+and re-established (required for reliability behind a load balancer /
+container restarts).
 """
 
 from __future__ import annotations
@@ -25,12 +29,18 @@ _settings = Settings()
 # to apps/api/ (where uvicorn runs) so the .db file lands next to .env.
 DATABASE_URL = _settings.database_url
 
-# SQLite-specific tweaks
+# Dialect-specific engine options
 _connect_args = {}
+_engine_options = {"future": True}
 if DATABASE_URL.startswith("sqlite"):
+    # Allow the FastAPI threadpool to open per-thread connections.
     _connect_args = {"check_same_thread": False}
+elif DATABASE_URL.startswith("postgresql"):
+    # Drop & re-establish stale pooled connections (Docker restarts, idle
+    # timeouts behind a proxy) instead of surfacing OperationalError.
+    _engine_options["pool_pre_ping"] = True
 
-engine = create_engine(DATABASE_URL, connect_args=_connect_args, future=True)
+engine = create_engine(DATABASE_URL, connect_args=_connect_args, **_engine_options)
 
 # --- Session factory -------------------------------------------------------
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
@@ -84,11 +94,14 @@ _LIGHTWEIGHT_COLUMNS = {
 def _migrate_lightweight() -> None:
     """Add columns introduced after the initial schema without Alembic.
 
-    ``Base.metadata.create_all`` only creates missing *tables* — it never
-    alters existing ones. For the small additive schema changes we've made
-    since the first deploy, run ``ALTER TABLE ... ADD COLUMN`` for any
-    column that isn't present yet (SQLite-safe). Existing rows get the
-    column's default value.
+    SQLite-only helper for the local dev DB. ``Base.metadata.create_all``
+    only creates missing *tables* — it never alters existing ones. For the
+    small additive schema changes we've made since the first deploy, run
+    ``ALTER TABLE ... ADD COLUMN`` for any column that isn't present yet
+    (SQLite-safe). Existing rows get the column's default value.
+
+    PostgreSQL is managed exclusively through Alembic (``alembic upgrade
+    head``) — see ``alembic/versions/``.
     """
     from sqlalchemy import inspect, text
 

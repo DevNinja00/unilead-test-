@@ -12,6 +12,20 @@ jobs:
     defaults:
       run:
         working-directory: apps/api
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: unilead
+          POSTGRES_PASSWORD: unilead_ci
+          POSTGRES_DB: unilead_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U unilead -d unilead_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -20,13 +34,29 @@ jobs:
           cache: pip
           cache-dependency-path: apps/api/requirements.txt
       - run: pip install -r requirements.txt
-      - run: python -m pytest tests/ -v --tb=short
+      - name: Apply migrations to PostgreSQL
+        env:
+          DATABASE_URL: postgresql+psycopg://unilead:unilead_ci@localhost:5432/unilead_test
+        run: alembic upgrade head
+      - name: Seed SQLite dev DB (pytest, SQLite path)
+        env:
+          DATABASE_URL: sqlite:///./unilead.db
+        run: python -m pytest tests/ -v --tb=short
+      - name: Migrate SQLite -> PostgreSQL and verify counts
+        env:
+          SOURCE_URL: sqlite:///./unilead.db
+          DEST_URL: postgresql+psycopg://unilead:unilead_ci@localhost:5432/unilead_test
+        run: python -m scripts.migrate
+      - name: Run tests on PostgreSQL
+        env:
+          DATABASE_URL: postgresql+psycopg://unilead:unilead_ci@localhost:5432/unilead_test
+        run: python -m pytest tests/ -v --tb=short
       - name: Ruff lint
         run: |
           pip install ruff==0.16.6
-          ruff check app/ tests/
+          ruff check app/ tests/ scripts/
       - name: Ruff format check
-        run: ruff format --check app/ tests/
+        run: ruff format --check app/ tests/ scripts/
 
   frontend:
     runs-on: ubuntu-latest

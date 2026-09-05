@@ -1,0 +1,19 @@
+# Secrets & local state
+.env
+*.local
+
+# Virtualenv / Python caches
+.venv
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Databases & scratch artifacts
+*.db
+*.sql
+*.dump
+
+# Editor
+.idea/
+.vscode/
