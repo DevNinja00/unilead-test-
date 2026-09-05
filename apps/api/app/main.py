@@ -42,6 +42,7 @@ from .config import Settings, get_cors_origins
 # Original Platform/backend routers + new remediation, transfer, instructor,
 # evidence, and auth routers
 from .routers import (
+    admin,
     auth,
     coach,
     competencies,
@@ -182,6 +183,7 @@ app.include_router(remediation.router)
 app.include_router(transfer.router)
 app.include_router(instructor.router)
 app.include_router(evidence.router)
+app.include_router(admin.router)
 # Auth (signup/login/me) — wired to the DB.
 app.include_router(auth.router)
 

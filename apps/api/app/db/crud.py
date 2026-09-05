@@ -36,12 +36,18 @@ def create_user(
     username: str,
     name: str,
     password_hash: str | None = None,
+    role: str = "student",
+    university_id: int | None = None,
+    email_verified: bool = False,
 ) -> models.User:
     user = models.User(
         email=_normalize_email(email),
         username=_normalize_username(username),
         name=name,
         password_hash=password_hash,
+        role=role,
+        university_id=university_id,
+        email_verified=email_verified,
     )
     db.add(user)
     db.flush()
@@ -134,6 +140,7 @@ def create_student(
     course_code: str = "MEC271",
     course_title: str = "Automatic Control",
     overall_progress: int = 0,
+    university_id: int | None = None,
 ) -> models.Student:
     student = models.Student(
         student_id=student_id,
@@ -142,6 +149,7 @@ def create_student(
         course_code=course_code,
         course_title=course_title,
         overall_progress=overall_progress,
+        university_id=university_id,
     )
     db.add(student)
     db.flush()
@@ -163,6 +171,208 @@ def list_all_students(db: Session) -> list[models.Student]:
 def update_student_progress(db: Session, student_id: str, overall_progress: int) -> None:
     db.query(models.Student).filter(models.Student.student_id == student_id).update(
         {"overall_progress": overall_progress}
+    )
+
+
+# ---- Organization (university identity / multi-tenant) ----------------------
+
+
+def get_university_by_id(db: Session, university_id: int) -> models.University | None:
+    return db.query(models.University).filter(models.University.id == university_id).first()
+
+
+def get_university_by_code(db: Session, code: str) -> models.University | None:
+    return (
+        db.query(models.University).filter(models.University.code == code.strip().upper()).first()
+    )
+
+
+def list_universities(db: Session) -> list[models.University]:
+    return db.query(models.University).order_by(models.University.name).all()
+
+
+def create_university(
+    db: Session, *, code: str, name: str, email_domains: list[str] | None = None
+) -> models.University:
+    import json
+
+    university = models.University(
+        code=code.strip().upper(),
+        name=name.strip(),
+        email_domains=json.dumps(email_domains or []),
+        is_active=True,
+    )
+    db.add(university)
+    db.flush()
+    return university
+
+
+def get_faculties_for_university(db: Session, university_id: int) -> list[models.Faculty]:
+    return (
+        db.query(models.Faculty)
+        .filter(models.Faculty.university_id == university_id)
+        .order_by(models.Faculty.name)
+        .all()
+    )
+
+
+def create_faculty(db: Session, *, university_id: int, code: str, name: str) -> models.Faculty:
+    faculty = models.Faculty(
+        university_id=university_id, code=code.strip().upper(), name=name.strip()
+    )
+    db.add(faculty)
+    db.flush()
+    return faculty
+
+
+def get_departments_for_faculty(db: Session, faculty_id: int) -> list[models.Department]:
+    return (
+        db.query(models.Department)
+        .filter(models.Department.faculty_id == faculty_id)
+        .order_by(models.Department.name)
+        .all()
+    )
+
+
+def create_department(db: Session, *, faculty_id: int, code: str, name: str) -> models.Department:
+    dept = models.Department(faculty_id=faculty_id, code=code.strip().upper(), name=name.strip())
+    db.add(dept)
+    db.flush()
+    return dept
+
+
+def get_courses_for_department(db: Session, department_id: int) -> list[models.Course]:
+    return (
+        db.query(models.Course)
+        .filter(models.Course.department_id == department_id)
+        .order_by(models.Course.code)
+        .all()
+    )
+
+
+def create_course(
+    db: Session,
+    *,
+    department_id: int,
+    code: str,
+    title: str,
+    credits: int = 3,
+) -> models.Course:
+    course = models.Course(
+        department_id=department_id,
+        code=code.strip().upper(),
+        title=title.strip(),
+        credits=credits,
+    )
+    db.add(course)
+    db.flush()
+    return course
+
+
+def get_sections_for_course(db: Session, course_id: int) -> list[models.Section]:
+    return (
+        db.query(models.Section)
+        .filter(models.Section.course_id == course_id)
+        .order_by(models.Section.term, models.Section.code)
+        .all()
+    )
+
+
+def create_section(
+    db: Session,
+    *,
+    course_id: int,
+    term: str,
+    code: str,
+    instructor_user_id: int | None = None,
+) -> models.Section:
+    section = models.Section(
+        course_id=course_id,
+        term=term.strip().upper(),
+        code=code.strip().upper(),
+        instructor_user_id=instructor_user_id,
+    )
+    db.add(section)
+    db.flush()
+    return section
+
+
+def get_section_by_id(db: Session, section_id: int) -> models.Section | None:
+    return db.query(models.Section).filter(models.Section.id == section_id).first()
+
+
+def enroll_student_in_section(
+    db: Session, *, student_id: str, section_id: int
+) -> models.Enrollment:
+    existing = (
+        db.query(models.Enrollment)
+        .filter(
+            models.Enrollment.student_id == student_id,
+            models.Enrollment.section_id == section_id,
+        )
+        .first()
+    )
+    if existing is not None:
+        return existing
+    enrollment = models.Enrollment(student_id=student_id, section_id=section_id, status="active")
+    db.add(enrollment)
+    db.flush()
+    return enrollment
+
+
+def unenroll_student_from_section(db: Session, *, student_id: str, section_id: int) -> bool:
+    deleted = (
+        db.query(models.Enrollment)
+        .filter(
+            models.Enrollment.student_id == student_id,
+            models.Enrollment.section_id == section_id,
+        )
+        .delete()
+    )
+    db.flush()
+    return deleted > 0
+
+
+def get_students_in_section(db: Session, section_id: int) -> list[models.Student]:
+    return (
+        db.query(models.Student)
+        .join(models.Enrollment, models.Enrollment.student_id == models.Student.student_id)
+        .filter(models.Enrollment.section_id == section_id)
+        .order_by(models.Student.display_name)
+        .all()
+    )
+
+
+def get_sections_for_student(db: Session, student_id: str) -> list[models.Section]:
+    return (
+        db.query(models.Section)
+        .join(models.Enrollment, models.Enrollment.section_id == models.Section.id)
+        .filter(models.Enrollment.student_id == student_id)
+        .all()
+    )
+
+
+def get_sections_for_instructor(db: Session, instructor_user_id: int) -> list[models.Section]:
+    return (
+        db.query(models.Section)
+        .filter(models.Section.instructor_user_id == instructor_user_id)
+        .order_by(models.Section.term, models.Section.code)
+        .all()
+    )
+
+
+def get_students_for_instructor(db: Session, instructor_user_id: int) -> list[models.Student]:
+    """All distinct students enrolled in any section the instructor teaches."""
+    section_ids = [s.id for s in get_sections_for_instructor(db, instructor_user_id)]
+    if not section_ids:
+        return []
+    return (
+        db.query(models.Student)
+        .join(models.Enrollment, models.Enrollment.student_id == models.Student.student_id)
+        .filter(models.Enrollment.section_id.in_(section_ids))
+        .distinct()
+        .order_by(models.Student.display_name)
+        .all()
     )
 
 
@@ -519,6 +729,7 @@ def add_audit_log(
     detail: str = "",
     ip_address: str | None = None,
     outcome: str = "OK",
+    university_id: int | None = None,
 ) -> models.AuditLog:
     """Record one security-relevant event in the audit trail.
 
@@ -534,6 +745,7 @@ def add_audit_log(
         detail=detail[:_MAX_DETAIL_LENGTH],
         ip_address=ip_address,
         outcome=outcome,
+        university_id=university_id,
     )
     db.add(entry)
     db.flush()

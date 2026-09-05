@@ -79,6 +79,12 @@ def create_all_tables() -> None:
     Base.metadata.create_all(bind=engine)
     _migrate_lightweight()
 
+    # Seed / backfill the default organization (idempotent) so tenant-less
+    # accounts and the untouched frontend keep working from first boot.
+    from .bootstrap import boot_default_organization
+
+    boot_default_organization()
+
 
 _LIGHTWEIGHT_COLUMNS = {
     "users": [
@@ -92,6 +98,13 @@ _LIGHTWEIGHT_COLUMNS = {
         ("password_reset_sent_at", "DATETIME", None),
         ("last_password_change_at", "DATETIME", None),
         ("token_version", "INTEGER NOT NULL DEFAULT 0", "0"),
+        ("university_id", "INTEGER", None),
+    ],
+    "students": [
+        ("university_id", "INTEGER", None),
+    ],
+    "audit_logs": [
+        ("university_id", "INTEGER", None),
     ],
 }
 

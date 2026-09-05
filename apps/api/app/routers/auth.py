@@ -38,6 +38,7 @@ from ..auth.dependencies import get_current_user
 from ..auth.service import create_access_token, hash_password, verify_password_timing_resistant
 from ..config import Settings
 from ..db import crud, get_db
+from ..db.bootstrap import get_default_section_id
 from ..db.models import User
 from ..schemas.auth import (
     AuthResponse,
@@ -310,6 +311,13 @@ def signup(req: SignUpRequest, request: Request, db: Session = Depends(get_db)) 
 
         # 5. Seed initial competencies
         _seed_initial_competencies(db, student_id)
+
+        # 5b. Tenant-less accounts get automatic data access: enroll the new
+        # learner in the default organization's section so student-data and
+        # instructor endpoints keep working exactly as before this release.
+        section_id = get_default_section_id(db)
+        if section_id is not None:
+            crud.enroll_student_in_section(db, student_id=student_id, section_id=section_id)
 
         # 6. Issue the verification code (email it) before committing.
         _issue_verification_code(db, user)

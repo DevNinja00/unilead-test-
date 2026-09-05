@@ -2,6 +2,12 @@
 
 Schema overview:
 
+  University            - tenant org (super_admin creates; users/students belong)
+  Faculty               - university -> faculty
+  Department            - faculty -> department
+  Course                - department -> course
+  Section               - course -> section (one instructor)
+  Enrollment            - student <-> section membership (access boundary)
   User                  - auth account (email + password hash + token version)
   Student              - one User → many Students (currently 1:1 in practice)
   CompetencySnapshot   - per-student, per-competency status + progress
@@ -14,7 +20,7 @@ Schema overview:
   CoachConversation    - one row per coach session (group of turns)
   CoachMessage         - one row per message in a conversation
   EvidenceEvent        - chronological feed entry (one per notable event)
-  AuditLog             - security-relevant actions (auth + instructor reads)
+  AuditLog             - security-relevant actions (auth + org + instructor)
 """
 
 from __future__ import annotations
@@ -40,6 +46,134 @@ from .database import Base
 def _utcnow() -> datetime:
     """Timezone-naive UTC now — matches SQLite's default datetime format."""
     return datetime.now(UTC).replace(tzinfo=None)
+
+
+class University(Base):
+    """A tenant organization (university). Everything hangs off this."""
+
+    __tablename__ = "universities"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    code: Mapped[str] = mapped_column(String(32), unique=True, index=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    email_domains: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
+
+    faculties: Mapped[list[Faculty]] = relationship(
+        "Faculty", back_populates="university", cascade="all, delete-orphan"
+    )
+
+
+class Faculty(Base):
+    """A faculty within a university (e.g. Engineering)."""
+
+    __tablename__ = "faculties"
+    __table_args__ = (
+        UniqueConstraint("university_id", "code", name="uq_faculties_university_code"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    university_id: Mapped[int] = mapped_column(
+        ForeignKey("universities.id"), nullable=False, index=True
+    )
+    code: Mapped[str] = mapped_column(String(32), nullable=False)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
+
+    university: Mapped[University] = relationship("University", back_populates="faculties")
+    departments: Mapped[list[Department]] = relationship(
+        "Department", back_populates="faculty", cascade="all, delete-orphan"
+    )
+
+
+class Department(Base):
+    """A department within a faculty (e.g. Mechanical Engineering)."""
+
+    __tablename__ = "departments"
+    __table_args__ = (UniqueConstraint("faculty_id", "code", name="uq_departments_faculty_code"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    faculty_id: Mapped[int] = mapped_column(ForeignKey("faculties.id"), nullable=False, index=True)
+    code: Mapped[str] = mapped_column(String(32), nullable=False)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
+
+    faculty: Mapped[Faculty] = relationship("Faculty", back_populates="departments")
+    courses: Mapped[list[Course]] = relationship(
+        "Course", back_populates="department", cascade="all, delete-orphan"
+    )
+
+
+class Course(Base):
+    """A course within a department (e.g. MEC271 Automatic Control)."""
+
+    __tablename__ = "courses"
+    __table_args__ = (UniqueConstraint("department_id", "code", name="uq_courses_department_code"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    department_id: Mapped[int] = mapped_column(
+        ForeignKey("departments.id"), nullable=False, index=True
+    )
+    code: Mapped[str] = mapped_column(String(32), nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    credits: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
+
+    department: Mapped[Department] = relationship("Department", back_populates="courses")
+    sections: Mapped[list[Section]] = relationship(
+        "Section", back_populates="course", cascade="all, delete-orphan"
+    )
+
+
+class Section(Base):
+    """One teaching section of a course, taught by one instructor."""
+
+    __tablename__ = "sections"
+    __table_args__ = (
+        UniqueConstraint("course_id", "term", "code", name="uq_sections_course_term_code"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    course_id: Mapped[int] = mapped_column(ForeignKey("courses.id"), nullable=False, index=True)
+    term: Mapped[str] = mapped_column(String(32), nullable=False)
+    code: Mapped[str] = mapped_column(String(32), nullable=False)
+    instructor_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id"), nullable=True, index=True
+    )
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
+
+    course: Mapped[Course] = relationship("Course", back_populates="sections")
+    instructor: Mapped[User | None] = relationship("User", foreign_keys=[instructor_user_id])
+    enrollments: Mapped[list[Enrollment]] = relationship(
+        "Enrollment", back_populates="section", cascade="all, delete-orphan"
+    )
+
+
+class Enrollment(Base):
+    """Student ↔ section membership — the access boundary for course data."""
+
+    __tablename__ = "enrollments"
+    __table_args__ = (
+        UniqueConstraint("student_id", "section_id", name="uq_enrollments_student_section"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    student_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("students.student_id"), nullable=False, index=True
+    )
+    section_id: Mapped[int] = mapped_column(ForeignKey("sections.id"), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="active")
+
+    enrolled_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
+
+    student: Mapped[Student] = relationship("Student", back_populates="enrollments")
+    section: Mapped[Section] = relationship("Section", back_populates="enrollments")
 
 
 class User(Base):
@@ -76,6 +210,12 @@ class User(Base):
     # issued token for the account in one step — no per-token blacklist.
     token_version: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
+    # Tenant membership: the university this account belongs to (null until
+    # the default organization backfill / explicit provisioning assigns one).
+    university_id: Mapped[int | None] = mapped_column(
+        ForeignKey("universities.id"), nullable=True, index=True
+    )
+
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
 
     students: Mapped[list[Student]] = relationship("Student", back_populates="user")
@@ -97,9 +237,24 @@ class Student(Base):
     )
     overall_progress: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
+    # Tenant membership: the university this learner belongs to.
+    university_id: Mapped[int | None] = mapped_column(
+        ForeignKey("universities.id"), nullable=True, index=True
+    )
+
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
 
     user: Mapped[User] = relationship("User", back_populates="students")
+    enrollments: Mapped[list[Enrollment]] = relationship(
+        "Enrollment", back_populates="student", cascade="all, delete-orphan"
+    )
+    sections: Mapped[list[Section]] = relationship(
+        "Section",
+        secondary="enrollments",
+        primaryjoin="Enrollment.student_id == Student.student_id",
+        secondaryjoin="Enrollment.section_id == Section.id",
+        viewonly=True,
+    )
     competencies: Mapped[list[CompetencySnapshot]] = relationship(
         "CompetencySnapshot", back_populates="student", cascade="all, delete-orphan"
     )
@@ -385,3 +540,9 @@ class AuditLog(Base):
     detail: Mapped[str] = mapped_column(Text, nullable=False, default="")
     ip_address: Mapped[str | None] = mapped_column(String(64), nullable=True)
     outcome: Mapped[str] = mapped_column(String(16), nullable=False, default="OK")
+
+    # Org scope: the university within which the event occurred (nullable
+    # for global/system events that have no tenant).
+    university_id: Mapped[int | None] = mapped_column(
+        ForeignKey("universities.id"), nullable=True, index=True
+    )

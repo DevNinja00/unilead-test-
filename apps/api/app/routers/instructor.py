@@ -41,6 +41,7 @@ def _audit_instructor_view(
         detail=f"instructor read view={view}",
         ip_address=ip,
         outcome="OK",
+        university_id=current_user.university_id,
     )
 
 
@@ -55,7 +56,7 @@ def get_class_summary(
     _audit_instructor_view(db, current_user=current_user, ip=ip, view="summary")
     db.commit()
     _log.debug("class summary requested by instructor=%d", current_user.id)
-    return instructor_service.get_class_summary()
+    return instructor_service.get_class_summary(db, current_user.id)
 
 
 @router.get("/aggregate", response_model=list[InstructorCompetencyAggregate])
@@ -69,7 +70,7 @@ def get_competency_aggregate(
     _audit_instructor_view(db, current_user=current_user, ip=ip, view="aggregate")
     db.commit()
     _log.debug("competency aggregate requested by instructor=%d", current_user.id)
-    return instructor_service.get_competency_aggregate()
+    return instructor_service.get_competency_aggregate(db, current_user.id)
 
 
 @router.get("/students", response_model=list[InstructorStudentSummary])
@@ -83,7 +84,7 @@ def list_students(
     _audit_instructor_view(db, current_user=current_user, ip=ip, view="students")
     db.commit()
     _log.debug("student roster requested by instructor=%d", current_user.id)
-    return instructor_service.list_all_students()
+    return instructor_service.list_all_students(db, current_user.id)
 
 
 @router.get("/students/{student_id}", response_model=InstructorStudentDetail)
@@ -100,7 +101,7 @@ def get_student_detail(
     )
     db.commit()
     _log.info("student detail requested by instructor=%d student=%s", current_user.id, student_id)
-    detail = instructor_service.get_student_detail(student_id)
+    detail = instructor_service.get_student_detail(db, current_user.id, student_id)
     if detail is None:
         raise HTTPException(
             status_code=404,

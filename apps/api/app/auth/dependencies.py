@@ -114,7 +114,7 @@ def get_current_student(
     return students[0]
 
 
-def require_roles(*roles: str):
+def require_roles(*roles: str, scope: str | None = None):
     """Build a dependency gating access to endpoints on the user's role.
 
     Usage::
@@ -132,7 +132,7 @@ def require_roles(*roles: str):
         if current_user.role not in roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Instructor access required.",
+                detail="You do not have permission to access this resource.",
             )
         return current_user
 
@@ -150,5 +150,48 @@ def get_current_instructor(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Instructor access required.",
+        )
+    return current_user
+
+
+def get_current_super_admin(
+    current_user: models.User = Depends(get_current_user),
+) -> models.User:
+    """Resolve the current user as a SUPER_ADMIN (global tenant manager)."""
+    if current_user.role != "super_admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Super-admin access required.",
+        )
+    return current_user
+
+
+def get_current_university_admin(
+    current_user: models.User = Depends(get_current_user),
+) -> models.User:
+    """Resolve the current user as a UNIVERSITY_ADMIN who owns a university."""
+    if current_user.role != "university_admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="University-admin access required.",
+        )
+    if current_user.university_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="University admin is not bound to a university.",
+        )
+    return current_user
+
+
+def get_current_admin(
+    current_user: models.User = Depends(get_current_user),
+) -> models.User:
+    """Resolve the current user as any administrator (SUPER_ADMIN or
+    UNIVERSITY_ADMIN). Endpoints that accept both tiers must still enforce
+    tenant scoping explicitly against ``current_user.university_id``."""
+    if current_user.role not in ("super_admin", "university_admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Administrator access required.",
         )
     return current_user
