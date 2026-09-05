@@ -276,9 +276,7 @@ def verification_code_cooldown(user: User) -> int:
     response_model=AuthResponse,
     responses={400: {"description": "Invalid/expired code or already verified."}},
 )
-def verify_email(
-    req: VerifyEmailRequest, request: Request, db: Session = Depends(get_db)
-) -> dict:
+def verify_email(req: VerifyEmailRequest, request: Request, db: Session = Depends(get_db)) -> dict:
     ip = request.client.host if request.client else "unknown"
     _check_verify_rate_limit(ip)
 

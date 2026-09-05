@@ -45,7 +45,7 @@ def code_ttl_seconds() -> int:
 
 def generate_code() -> str:
     """Return a random numeric code (leading zeros preserved)."""
-    code = str(randbelow(10 ** _settings.verification_code_length))
+    code = str(randbelow(10**_settings.verification_code_length))
     return code.zfill(_settings.verification_code_length)
 
 

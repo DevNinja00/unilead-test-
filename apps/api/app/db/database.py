@@ -69,6 +69,7 @@ def create_all_tables() -> None:
     Base.metadata.create_all(bind=engine)
     _migrate_lightweight()
 
+
 _LIGHTWEIGHT_COLUMNS = {
     "users": [
         # (column_name, sqlite_column_definition, default_for_existing_rows)

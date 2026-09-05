@@ -74,11 +74,11 @@ def test_rejects_consumer_email_providers(client, domain):
 @pytest.mark.parametrize(
     "domain",
     [
-        "evil.edu.eg.com",          # edu.eg in the middle — final TLD is .com
+        "evil.edu.eg.com",  # edu.eg in the middle — final TLD is .com
         "foo.edu.eg.attacker.net",  # trailing .net after edu.eg
-        "harvard.edu.cm.evil",      # junk after the edu tail
-        "x.edu.e",                  # country code too short
-        "a.b.c.education",          # .education is NOT the .edu TLD
+        "harvard.edu.cm.evil",  # junk after the edu tail
+        "x.edu.e",  # country code too short
+        "a.b.c.education",  # .education is NOT the .edu TLD
     ],
 )
 def test_rejects_attacker_domain_tricks(client, domain):
