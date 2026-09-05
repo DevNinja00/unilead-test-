@@ -48,7 +48,7 @@ export default function App() {
         <Route path="/" element={<Navigate to="/signup" replace />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/onboarding" element={<Onboarding />} />
+        <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
 
         {/* Protected routes — require authentication */}
         <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />

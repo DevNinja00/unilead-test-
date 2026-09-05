@@ -27,6 +27,16 @@ export default function SignUp() {
     if (!email.trim()) next.email = 'Please enter your email.';
     else if (!/^\S+@\S+\.\S+$/.test(email)) next.email = 'Enter a valid email address.';
     if (password.length < 8) next.password = 'Password must be at least 8 characters.';
+    else {
+      // Mirror the backend policy in schemas/auth.py so validation fails fast
+      // with a friendly message instead of a generic 422.
+      const missing: string[] = [];
+      if (!/[A-Z]/.test(password)) missing.push('an uppercase letter');
+      if (!/[a-z]/.test(password)) missing.push('a lowercase letter');
+      if (!/\d/.test(password)) missing.push('a digit');
+      if (!/[!@#$%^&*()_+\-=[\]{}|;:,.<>?]/.test(password)) missing.push('a special character');
+      if (missing.length) next.password = `Password must contain ${missing.join(', ')}.`;
+    }
     setErrors(next);
     return Object.keys(next).length === 0;
   }

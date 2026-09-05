@@ -73,7 +73,7 @@ export async function getStudent(): Promise<Student> {
   ]);
 
   return {
-    id: 'student-1',
+    id: me.studentId,
     name: me.name,
     email: me.email,
     course: { id: 'mec271', code: progress.course_code, title: progress.course_title },

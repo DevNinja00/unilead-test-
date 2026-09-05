@@ -13,11 +13,20 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from . import models
 
 # ---- User ----------------------------------------------------------------
+
+
+def _normalize_email(email: str) -> str:
+    return email.strip().lower()
+
+
+def _normalize_username(username: str) -> str:
+    return username.strip().lower()
 
 
 def create_user(
@@ -28,18 +37,31 @@ def create_user(
     name: str,
     password_hash: str | None = None,
 ) -> models.User:
-    user = models.User(email=email, username=username, name=name, password_hash=password_hash)
+    user = models.User(
+        email=_normalize_email(email),
+        username=_normalize_username(username),
+        name=name,
+        password_hash=password_hash,
+    )
     db.add(user)
     db.flush()
     return user
 
 
 def get_user_by_email(db: Session, email: str) -> models.User | None:
-    return db.query(models.User).filter(models.User.email == email).first()
+    return (
+        db.query(models.User)
+        .filter(func.lower(models.User.email) == _normalize_email(email))
+        .first()
+    )
 
 
 def get_user_by_username(db: Session, username: str) -> models.User | None:
-    return db.query(models.User).filter(models.User.username == username).first()
+    return (
+        db.query(models.User)
+        .filter(func.lower(models.User.username) == _normalize_username(username))
+        .first()
+    )
 
 
 def get_user_by_id(db: Session, user_id: int) -> models.User | None:

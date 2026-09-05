@@ -49,7 +49,20 @@ async function handleResponse<T>(res: Response): Promise<T> {
     let detail = res.statusText;
     try {
       const body = await res.json();
-      if (body?.detail) detail = typeof body.detail === 'string' ? body.detail : detail;
+      if (body?.detail) {
+        if (typeof body.detail === 'string') {
+          detail = body.detail;
+        } else if (Array.isArray(body.detail)) {
+          // pydantic validation errors: [{loc, msg, type}, ...] → human-readable
+          detail = body.detail
+            .map((e: { loc?: unknown; msg?: string }) => {
+              const field = Array.isArray(e?.loc) ? e.loc[e.loc.length - 1] : '';
+              const msg = e?.msg ?? '';
+              return field ? `${field}: ${msg}` : msg;
+            })
+            .join('; ');
+        }
+      }
     } catch {
       // response wasn't JSON — fall back to statusText
     }

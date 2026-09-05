@@ -21,6 +21,7 @@ import time
 from collections import defaultdict
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..auth.dependencies import get_current_user
@@ -62,6 +63,11 @@ def _sweep_expired(attempts: dict[str, list[float]], window: float) -> None:
 
 
 def _check_login_rate_limit(ip: str) -> None:
+    """Raise 429 if this IP already has too many recent login FAILURES.
+
+    Failure count only — successful logins never count toward the limit,
+    and a successful login resets the counter (see ``_reset_login_attempts``).
+    """
     _sweep_expired(_login_attempts, _LOGIN_WINDOW_SECONDS)
     now = time.monotonic()
     _login_attempts[ip] = [t for t in _login_attempts[ip] if now - t < _LOGIN_WINDOW_SECONDS]
@@ -70,11 +76,14 @@ def _check_login_rate_limit(ip: str) -> None:
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Too many login attempts. Please try again later.",
         )
-    _login_attempts[ip].append(now)
 
 
-def _record_login_attempt(ip: str) -> None:
+def _record_login_failure(ip: str) -> None:
     _login_attempts[ip].append(time.monotonic())
+
+
+def _reset_login_attempts(ip: str) -> None:
+    _login_attempts.pop(ip, None)
 
 
 def _check_signup_rate_limit(ip: str) -> None:
@@ -123,44 +132,58 @@ def signup(req: SignUpRequest, request: Request, db: Session = Depends(get_db)) 
     ip = request.client.host if request.client else "unknown"
     _check_signup_rate_limit(ip)
 
-    # 1. Email unique?
-    if crud.get_user_by_email(db, req.email) is not None:
+    # Normalize once so uniqueness + login are case-insensitive on the
+    # local part too (EmailStr only lowercases the domain, not the mailbox).
+    email = req.email.lower()
+    username = req.username.lower()
+
+    # 1. Email unique? (case-insensitive)
+    if crud.get_user_by_email(db, email) is not None:
         # Use generic message to prevent enumeration
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="An account with that email or username already exists.",
         )
 
-    # 2. Username unique?
-    if crud.get_user_by_username(db, req.username) is not None:
+    # 2. Username unique? (case-insensitive)
+    if crud.get_user_by_username(db, username) is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="An account with that email or username already exists.",
         )
 
-    # 3. Create user
-    user = crud.create_user(
-        db,
-        email=req.email,
-        username=req.username,
-        name=req.name,
-        password_hash=hash_password(req.password),
-    )
-    db.flush()
+    # 3. Create user + student + seed — in one transaction. The pre-checks
+    # above are not atomic against concurrent requests, so a race that slips
+    # past them surfaces here as an IntegrityError → map it to 409, not 500.
+    try:
+        user = crud.create_user(
+            db,
+            email=email,
+            username=username,
+            name=req.name.strip(),
+            password_hash=hash_password(req.password),
+        )
+        db.flush()
 
-    # 4. Create student record linked to this user
-    student_id = _student_id_for_user(user.id)
-    crud.create_student(
-        db,
-        student_id=student_id,
-        user_id=user.id,
-        display_name=req.name,
-    )
+        # 4. Create student record linked to this user
+        student_id = _student_id_for_user(user.id)
+        crud.create_student(
+            db,
+            student_id=student_id,
+            user_id=user.id,
+            display_name=req.name.strip(),
+        )
 
-    # 5. Seed initial competencies
-    _seed_initial_competencies(db, student_id)
+        # 5. Seed initial competencies
+        _seed_initial_competencies(db, student_id)
 
-    db.commit()
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An account with that email or username already exists.",
+        ) from None
 
     # 6. Issue JWT
     token = create_access_token(subject=str(user.id))
@@ -182,7 +205,11 @@ def login(req: LoginRequest, request: Request, db: Session = Depends(get_db)) ->
     _check_login_rate_limit(ip)
 
     user = crud.get_user_by_email(db, req.email)
-    if user is None or not verify_password_timing_resistant(req.password, user.password_hash):
+    # Always run the dummy-bcrypt timing-resistant check — even for unknown
+    # emails — so account existence can't be probed via response timing.
+    valid = verify_password_timing_resistant(req.password, user.password_hash if user else None)
+    if not valid:
+        _record_login_failure(ip)
         _log.warning("Failed login attempt for email=%s from ip=%s", _sanitize_email(req.email), ip)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -190,7 +217,8 @@ def login(req: LoginRequest, request: Request, db: Session = Depends(get_db)) ->
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    _record_login_attempt(ip)
+    # 429s are for brute force; a successful login shows this IP is legit.
+    _reset_login_attempts(ip)
 
     # Find the student record linked to this user.
     students = crud.get_students_by_user_id(db, user.id)
