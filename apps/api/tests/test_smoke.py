@@ -11,6 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.services import verification
 
 
 @pytest.fixture(scope="module")
@@ -18,21 +19,36 @@ def client():
     return TestClient(app)
 
 
-@pytest.fixture(scope="module")
-def auth_headers(client):
-    """Create one user for the entire test module and return auth headers."""
-    uniq = "smoke" + str(int(time.time()))
+def _signup(client, uniq: str, name: str = "Smoke Test") -> dict:
+    """Sign up a user and return the JSON body (verification_required)."""
     r = client.post(
         "/api/auth/signup",
         json={
-            "name": "Smoke Test",
+            "name": name,
             "username": uniq,
-            "email": f"{uniq}@smoketest.example.com",
+            "email": f"{uniq}@smoketest.edu.eg",
             "password": "Str0ng!Pass#word",
         },
     )
-    assert r.status_code == 200, f"signup failed: {r.text}"
-    token = r.json()["access_token"]
+    assert r.status_code == 201, f"signup failed: {r.text}"
+    return r.json()
+
+
+def _verify(client, email: str) -> str:
+    """Complete email verification and return the JWT."""
+    code = verification.last_sent.get(email)
+    assert code, f"no verification code recorded for {email}"
+    r = client.post("/api/auth/verify-email", json={"email": email, "code": code})
+    assert r.status_code == 200, f"verify-email failed: {r.text}"
+    return r.json()["access_token"]
+
+
+@pytest.fixture(scope="module")
+def auth_headers(client):
+    """Create one verified user for the entire test module and return auth headers."""
+    uniq = "smoke" + str(int(time.time()))
+    body = _signup(client, uniq)
+    token = _verify(client, body["email"])
     return {"Authorization": f"Bearer {token}"}
 
 
@@ -42,32 +58,37 @@ def test_health_check(client):
     assert r.json()["status"] == "ok"
 
 
-def test_signup_returns_token(client):
+def test_signup_requires_verification(client):
     uniq = "signup" + str(int(time.time()))
-    r = client.post(
-        "/api/auth/signup",
-        json={
-            "name": "Signup Test",
-            "username": uniq,
-            "email": f"{uniq}@test.example.com",
-            "password": "Str0ng!Pass#word",
-        },
-    )
+    body = _signup(client, uniq)
+    assert body["verification_required"] is True
+    assert "access_token" not in body
+
+
+def test_verify_email_returns_token_and_me_works(client):
+    uniq = "verify" + str(int(time.time()))
+    body = _signup(client, uniq)
+    token = _verify(client, body["email"])
+    assert token
+
+    r = client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
     assert r.status_code == 200
-    assert "access_token" in r.json()
+    assert r.json()["email"] == body["email"]
 
 
 def test_login_correct_and_wrong(client):
     uniq = "login" + str(int(time.time()))
-    email = f"{uniq}@test.example.com"
+    email = f"{uniq}@smoketest.edu.eg"
     password = "Str0ng!Pass#word"
-    r = client.post(
-        "/api/auth/signup",
-        json={"name": "Login Test", "username": uniq, "email": email, "password": password},
-    )
-    assert r.status_code == 200
+    _signup(client, uniq, name="Login Test")
 
-    # bad password -> 401
+    # not yet verified -> 403, even with correct password
+    r = client.post("/api/auth/login", json={"email": email, "password": password})
+    assert r.status_code == 403
+    assert "not verified" in r.json()["detail"].lower()
+
+    # bad password -> 401 even after verification
+    _verify(client, email)
     r = client.post("/api/auth/login", json={"email": email, "password": "WrongPassword1!"})
     assert r.status_code == 401
 

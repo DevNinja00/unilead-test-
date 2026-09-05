@@ -68,6 +68,31 @@ def get_user_by_id(db: Session, user_id: int) -> models.User | None:
     return db.query(models.User).filter(models.User.id == user_id).first()
 
 
+def set_user_verification(
+    db: Session,
+    *,
+    user: models.User,
+    code_hash: str,
+    expires_at: datetime,
+    sent_at: datetime,
+) -> None:
+    """Store a fresh (unexpired) verification code for a user."""
+    user.email_verified = False
+    user.email_verification_code_hash = code_hash
+    user.email_verification_expires_at = expires_at
+    user.email_verification_sent_at = sent_at
+    db.flush()
+
+
+def mark_user_verified(db: Session, *, user: models.User) -> None:
+    """Clear the verification code and mark the account as verified."""
+    user.email_verified = True
+    user.email_verification_code_hash = None
+    user.email_verification_expires_at = None
+    user.email_verification_sent_at = None
+    db.flush()
+
+
 # ---- Student --------------------------------------------------------------
 
 

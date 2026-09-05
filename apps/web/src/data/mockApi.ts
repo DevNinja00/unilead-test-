@@ -38,6 +38,8 @@ import type {
   SignUpRequest,
   LoginRequest,
   MeResponse,
+  SignUpResult,
+  VerifyEmailRequest,
 } from '../types';
 
 function toFrontendStatus(status: string): CompetencyStatus {
@@ -577,14 +579,54 @@ function mapAuthResponse(r: ApiAuthResponse): AuthSession {
   };
 }
 
-export async function signUp(req: SignUpRequest): Promise<AuthSession> {
-  const r = await apiPost<ApiAuthResponse>('/auth/signup', {
+interface ApiSignUpResponse {
+  verification_required: boolean;
+  email: string;
+  message: string;
+  resend_after_seconds: number;
+}
+
+function mapSignUpResponse(r: ApiSignUpResponse): SignUpResult {
+  return {
+    verificationRequired: r.verification_required,
+    email: r.email,
+    message: r.message,
+    resendAfterSeconds: r.resend_after_seconds,
+  };
+}
+
+// Signup no longer returns a JWT — the backend emails a 6-digit code that
+// must be verified (POST /api/auth/verify-email) before a token is issued.
+export async function signUp(req: SignUpRequest): Promise<SignUpResult> {
+  const r = await apiPost<ApiSignUpResponse>('/auth/signup', {
     name: req.name,
     username: req.username,
     email: req.email,
     password: req.password,
   });
+  return mapSignUpResponse(r);
+}
+
+export async function verifyEmail(req: VerifyEmailRequest): Promise<AuthSession> {
+  const r = await apiPost<ApiAuthResponse>('/auth/verify-email', {
+    email: req.email,
+    code: req.code,
+  });
   return mapAuthResponse(r);
+}
+
+interface ApiResendResponse {
+  email: string;
+  message: string;
+  resend_after_seconds: number;
+}
+
+export async function resendVerificationCode(email: string): Promise<{
+  email: string;
+  resendAfterSeconds: number;
+}> {
+  const r = await apiPost<ApiResendResponse>('/auth/resend-verification', { email });
+  return { email: r.email, resendAfterSeconds: r.resend_after_seconds };
 }
 
 export async function login(req: LoginRequest): Promise<AuthSession> {

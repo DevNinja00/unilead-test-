@@ -75,6 +75,21 @@ class Settings(BaseSettings):
     student_id: str = "api-gateway-student"
     course_id: str = "MEC271"
 
+    # --- Email verification (signup confirmation code) ---
+    # backend: "log" prints the code to the server console (dev/demo);
+    # "smtp" sends a real email via SMTP (configure smtp_* below).
+    email_backend: str = "log"
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_from_email: str = "no-reply@compass.edu"
+    smtp_starttls: bool = True
+    verification_code_length: int = 6
+    verification_code_ttl_minutes: int = 15
+    verification_resend_cooldown_seconds: int = 60
+    verification_max_attempts: int = 5
+
 
 def get_cors_origins() -> list[str]:
     """Return the list of allowed CORS origins (comma-separated string)."""

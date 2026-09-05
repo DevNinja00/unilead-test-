@@ -37,13 +37,29 @@ function buildHeaders(extra?: HeadersInit): HeadersInit {
 
 function redirectToLogin(): void {
   clearAuthToken();
+  // Already on the login page? Just surface the error in-place — no reload.
+  if (window.location.pathname === '/login') return;
   window.location.href = '/login';
+}
+
+/**
+ * Error thrown on a non-2xx HTTP response, carrying the status code so
+ * callers can branch on it (e.g. Login detecting a 403 "not verified").
+ */
+export class ApiError extends Error {
+  readonly status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
 }
 
 async function handleResponse<T>(res: Response): Promise<T> {
   if (res.status === 401) {
     redirectToLogin();
-    throw new Error('Session expired. Please log in again.');
+    throw new ApiError(401, 'Session expired. Please log in again.');
   }
   if (!res.ok) {
     let detail = res.statusText;
@@ -66,7 +82,7 @@ async function handleResponse<T>(res: Response): Promise<T> {
     } catch {
       // response wasn't JSON — fall back to statusText
     }
-    throw new Error(`Request failed (${res.status}): ${detail}`);
+    throw new ApiError(res.status, `Request failed (${res.status}): ${detail}`);
   }
   return res.json() as Promise<T>;
 }

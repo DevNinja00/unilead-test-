@@ -6,6 +6,7 @@ import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import { useApp } from '../state/AppContext';
 import { login, getStudent } from '../data/mockApi';
+import { ApiError } from '../data/apiClient';
 import './SignUp.css';
 
 export default function Login() {
@@ -39,6 +40,12 @@ export default function Login() {
       setStudent({ ...student, name: session.name, email: session.email });
       navigate('/home');
     } catch (err) {
+      // 403 from login = correct password but the email isn't verified yet.
+      // Send them to the verification screen (a code is already in their inbox).
+      if (err instanceof ApiError && err.status === 403) {
+        navigate(`/verify-email?email=${encodeURIComponent(email.trim())}`);
+        return;
+      }
       setErrors({
         form: err instanceof Error ? err.message : 'Could not log in. Please try again.',
       });

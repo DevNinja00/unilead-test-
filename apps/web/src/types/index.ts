@@ -261,6 +261,18 @@ export interface SignUpRequest {
   password: string;
 }
 
+export interface SignUpResult {
+  verificationRequired: boolean;
+  email: string;
+  message: string;
+  resendAfterSeconds: number;
+}
+
+export interface VerifyEmailRequest {
+  email: string;
+  code: string;
+}
+
 export interface LoginRequest {
   email: string;
   password: string;

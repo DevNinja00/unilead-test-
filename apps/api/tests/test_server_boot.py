@@ -20,25 +20,36 @@ def test_app_is_a_fastapi_instance() -> None:
     assert isinstance(app, FastAPI)
 
 
-def _signup(client: TestClient, email: str = "", password: str = "TestPass!123") -> str:
-    """Sign up a fresh user and return the JWT."""
+def _signup_and_verify(client, email: str = "", password: str = "TestPass!123") -> tuple[str, str]:
+    """Sign up a fresh user, complete email verification, return (token, email)."""
     import time
+
+    from app.services import verification
 
     uniq = str(int(time.time()))
     if not email:
-        email = f"boot-{uniq}@example.com"
+        email = f"boot-{uniq}@university.edu.eg"
     response = client.post(
         "/api/auth/signup",
         json={"name": "Boot Test", "username": f"boot{uniq}", "email": email, "password": password},
     )
-    assert response.status_code == 200, f"signup failed: {response.text}"
-    return response.json()["access_token"]
+    assert response.status_code == 201, f"signup failed: {response.text}"
+    assert response.json()["verification_required"] is True
+
+    code = verification.last_sent.get(email)
+    assert code, f"no verification code recorded for {email}"
+    response = client.post(
+        "/api/auth/verify-email",
+        json={"email": email, "code": code},
+    )
+    assert response.status_code == 200, f"verify-email failed: {response.text}"
+    return response.json()["access_token"], email
 
 
 def test_app_exposes_compass_routes() -> None:
-    """``/api/competencies`` is now JWT-protected — sign up + GET with token."""
+    """``/api/competencies`` is JWT-protected — sign up, verify, then GET."""
     client = TestClient(app)
-    token = _signup(client)
+    token, _ = _signup_and_verify(client)
     response = client.get(
         "/api/competencies",
         headers={"Authorization": f"Bearer {token}"},

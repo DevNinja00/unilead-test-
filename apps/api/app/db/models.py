@@ -56,6 +56,14 @@ class User(Base):
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     # nullable so seeded demo accounts (without passwords) can exist for read-only views
 
+    # Email verification — set once at signup via a confirmation code.
+    # The plaintext code is never stored: only its SHA-256 hash, so a DB
+    # leak can't be replayed without the code that was emailed to the user.
+    email_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    email_verification_code_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    email_verification_expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    email_verification_sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
 
     students: Mapped[list[Student]] = relationship("Student", back_populates="user")

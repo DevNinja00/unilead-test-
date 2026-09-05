@@ -67,6 +67,42 @@ def create_all_tables() -> None:
     from . import models  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
+    _migrate_lightweight()
+
+_LIGHTWEIGHT_COLUMNS = {
+    "users": [
+        # (column_name, sqlite_column_definition, default_for_existing_rows)
+        ("email_verified", "BOOLEAN NOT NULL DEFAULT 0", "0"),
+        ("email_verification_code_hash", "VARCHAR(64)", None),
+        ("email_verification_expires_at", "DATETIME", None),
+        ("email_verification_sent_at", "DATETIME", None),
+    ],
+}
+
+
+def _migrate_lightweight() -> None:
+    """Add columns introduced after the initial schema without Alembic.
+
+    ``Base.metadata.create_all`` only creates missing *tables* — it never
+    alters existing ones. For the small additive schema changes we've made
+    since the first deploy, run ``ALTER TABLE ... ADD COLUMN`` for any
+    column that isn't present yet (SQLite-safe). Existing rows get the
+    column's default value.
+    """
+    from sqlalchemy import inspect, text
+
+    if not DATABASE_URL.startswith("sqlite"):
+        return
+    inspector = inspect(engine)
+    for table, columns in _LIGHTWEIGHT_COLUMNS.items():
+        if table not in inspector.get_table_names():
+            continue
+        existing = {c["name"] for c in inspector.get_columns(table)}
+        for col_name, col_def, _default in columns:
+            if col_name in existing:
+                continue
+            with engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col_name} {col_def}"))
 
 
 def seed_default_students_if_empty() -> None:

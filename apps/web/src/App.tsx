@@ -5,6 +5,7 @@ import NotFound from './pages/NotFound';
 
 import SignUp from './pages/SignUp';
 import Login from './pages/Login';
+import VerifyEmail from './pages/VerifyEmail';
 import Onboarding from './pages/Onboarding';
 import Home from './pages/Home';
 import MyLearning from './pages/MyLearning';
@@ -27,7 +28,7 @@ import InstructorDashboard from './pages/InstructorDashboard';
 import InstructorStudentDetail from './pages/InstructorStudentDetail';
 
 // Routes that render full-bleed, without the main Navbar (auth/onboarding flow).
-const NO_NAVBAR_ROUTES = ['/', '/signup', '/login', '/onboarding'];
+const NO_NAVBAR_ROUTES = ['/', '/signup', '/login', '/verify-email', '/onboarding'];
 
 function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
@@ -48,6 +49,7 @@ export default function App() {
         <Route path="/" element={<Navigate to="/signup" replace />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
 
         {/* Protected routes — require authentication */}

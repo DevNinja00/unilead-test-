@@ -56,6 +56,13 @@ def get_current_user(
     user = crud.get_user_by_id(db, user_id)
     if user is None:
         raise creds_exc
+    # Defense-in-depth: tokens are only issued after email verification, but
+    # block any stray pre-verification token from reaching protected routes.
+    if not user.email_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Email not verified. Check your inbox for the verification code.",
+        )
     return user
 
 
@@ -70,9 +77,12 @@ def get_current_user_optional(
     if not user_id_str:
         return None
     try:
-        return crud.get_user_by_id(db, int(user_id_str))
+        user = crud.get_user_by_id(db, int(user_id_str))
     except (TypeError, ValueError):
         return None
+    if user is not None and not user.email_verified:
+        return None
+    return user
 
 
 def get_current_student(
