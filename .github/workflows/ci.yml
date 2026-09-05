@@ -47,6 +47,12 @@ jobs:
           SOURCE_URL: sqlite:///./unilead.db
           DEST_URL: postgresql+psycopg://unilead:unilead_ci@localhost:5432/unilead_test
         run: python -m scripts.migrate
+      - name: Reset PostgreSQL to a clean schema
+        env:
+          DATABASE_URL: postgresql+psycopg://unilead:unilead_ci@localhost:5432/unilead_test
+        run: |
+          alembic downgrade base
+          alembic upgrade head
       - name: Run tests on PostgreSQL
         env:
           DATABASE_URL: postgresql+psycopg://unilead:unilead_ci@localhost:5432/unilead_test
