@@ -18,6 +18,9 @@ The script:
 * only moves columns that exist in *both* databases (older SQLite files may
   predate the verification columns — they get server defaults on dest);
 * keeps the numeric ``id`` values intact so relationships never break;
+* is idempotent — rows whose primary key already exists on the destination
+  are skipped, so it can run against a schema bootstrapped by a migration
+  (e.g. alembic 0003 seeds the default org) or be safely re-run;
 * coerces integer 0/1 from SQLite into real booleans for PostgreSQL;
 * verifies row-per-table counts between source and destination, and exits
   non-zero on any mismatch — safe to put in a release pipeline.
@@ -64,8 +67,22 @@ def _copy_table(source: sa.Engine, dest: sa.Engine, table: sa.Table) -> int:
         return {k: (bool(v) if k in bool_cols and v is not None else v) for k, v in row.items()}
 
     payload = [_coerce(dict(r)) for r in rows]
+
+    pk_names = [c.name for c in table.primary_key.columns]
     with dest.begin() as conn:
-        conn.execute(table.insert(), payload)
+        # Skip rows whose PK already exists on the destination. This keeps the
+        # copy idempotent when the destination was bootstrapped by a migration
+        # (e.g. alembic 0003 seeds the default org) or re-run on a partial load.
+        if pk_names:
+            existing = {
+                tuple(r) for r in conn.execute(sa.select(*[table.c[n] for n in pk_names])).all()
+            }
+            payload = [r for r in payload if tuple(r[n] for n in pk_names) not in existing]
+            if not payload:
+                print(f"skip {table.name:<28} already loaded (no new rows)")
+                return 0
+        if payload:
+            conn.execute(table.insert(), payload)
     return len(payload)
 
 
