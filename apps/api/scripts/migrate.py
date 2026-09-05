@@ -55,8 +55,17 @@ def _copy_table(source: sa.Engine, dest: sa.Engine, table: sa.Table) -> int:
         if table.name not in inspector.get_table_names():
             return 0
         existing = {c["name"] for c in inspector.get_columns(table.name)}
-        # Only columns present in BOTH the source and the live model.
-        columns = [c for c in table.columns if c.name in existing]
+        # Only columns present in BOTH the source, the live model, AND the
+        # destination (migrations may lag the model for a table or two).
+        with dest.connect() as dest_conn:
+            dest_inspector = inspect(dest_conn)
+            if table.name not in dest_inspector.get_table_names():
+                return 0
+            dest_cols = {c["name"] for c in dest_inspector.get_columns(table.name)}
+        columns = [c for c in table.columns if c.name in existing and c.name in dest_cols]
+        if not columns:
+            print(f"skip {table.name:<28} no shared columns between source and destination")
+            return 0
         bool_cols = {c.name for c in columns if isinstance(c.type, Boolean)}
         rows = conn.execute(sa.select(*columns)).mappings().all()
 

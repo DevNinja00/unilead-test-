@@ -114,6 +114,7 @@ def upgrade() -> None:
         sa.Column("student_id", sa.String(64), sa.ForeignKey("students.student_id"), nullable=False),
         sa.Column("section_id", sa.Integer, sa.ForeignKey("sections.id"), nullable=False),
         sa.Column("status", sa.String(16), nullable=False, server_default="active"),
+        sa.Column("enrolled_at", sa.DateTime, nullable=False, server_default=sa.func.now()),
         sa.UniqueConstraint("student_id", "section_id", name="uq_enrollments_student_section"),
     )
     op.create_index("ix_enrollments_student_id", "enrollments", ["student_id"])
