@@ -226,16 +226,18 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_table("enrollments")
-    op.drop_table("sections")
-    op.drop_table("courses")
-    op.drop_table("departments")
-    op.drop_table("faculties")
-    op.drop_table("universities")
-
+    # Drop the FK columns first: they reference universities, so PostgreSQL
+    # refuses to drop that table while these constraints still exist.
     op.drop_index("ix_audit_logs_university_id", table_name="audit_logs")
     op.drop_column("audit_logs", "university_id")
     op.drop_index("ix_students_university_id", table_name="students")
     op.drop_column("students", "university_id")
     op.drop_index("ix_users_university_id", table_name="users")
     op.drop_column("users", "university_id")
+
+    op.drop_table("enrollments")
+    op.drop_table("sections")
+    op.drop_table("courses")
+    op.drop_table("departments")
+    op.drop_table("faculties")
+    op.drop_table("universities")
