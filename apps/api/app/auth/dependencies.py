@@ -27,7 +27,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
 from ..db import crud, get_db, models
-from .service import decode_access_token
+from .service import decode_token_claims
 
 # auto_error=False so endpoints can choose whether auth is required
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
@@ -45,16 +45,22 @@ def get_current_user(
     )
     if not token:
         raise creds_exc
-    user_id_str = decode_access_token(token)
-    if not user_id_str:
+    claims = decode_token_claims(token)
+    if not claims:
         raise creds_exc
     try:
-        user_id = int(user_id_str)
+        user_id = int(claims["sub"])
     except (TypeError, ValueError):
         raise creds_exc from None
 
     user = crud.get_user_by_id(db, user_id)
     if user is None:
+        raise creds_exc
+    # Token revocation: a token is only valid if its version claim matches the
+    # user's current token_version (bumped on password reset / future
+    # "log out everywhere"). Tokens issued before this versioning existed
+    # carry no 'ver' claim, which is treated as version 0 — the stored default.
+    if int(claims.get("ver", 0)) != user.token_version:
         raise creds_exc
     # Defense-in-depth: tokens are only issued after email verification, but
     # block any stray pre-verification token from reaching protected routes.
@@ -73,14 +79,18 @@ def get_current_user_optional(
     """Like ``get_current_user`` but returns None instead of 401."""
     if not token:
         return None
-    user_id_str = decode_access_token(token)
-    if not user_id_str:
+    payload = decode_token_claims(token)
+    if not payload:
         return None
     try:
-        user = crud.get_user_by_id(db, int(user_id_str))
+        user = crud.get_user_by_id(db, int(payload["sub"]))
     except (TypeError, ValueError):
         return None
-    if user is not None and not user.email_verified:
+    if user is None:
+        return None
+    if int(payload.get("ver", 0)) != user.token_version:
+        return None
+    if not user.email_verified:
         return None
     return user
 
@@ -102,6 +112,31 @@ def get_current_student(
             detail="No student record linked to this user.",
         )
     return students[0]
+
+
+def require_roles(*roles: str):
+    """Build a dependency gating access to endpoints on the user's role.
+
+    Usage::
+
+        from ..auth.dependencies import require_roles
+
+        @router.get("/students")
+        def list_students(current_user = Depends(require_roles("instructor"))):
+            ...
+    """
+
+    def _role_dependency(
+        current_user: models.User = Depends(get_current_user),
+    ) -> models.User:
+        if current_user.role not in roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Instructor access required.",
+            )
+        return current_user
+
+    return _role_dependency
 
 
 def get_current_instructor(

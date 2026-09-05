@@ -20,6 +20,20 @@ UNIVERSITY_EMAIL_DOMAIN_RE = re.compile(
 )
 
 
+def validate_password_strength(password: str) -> list[str]:
+    """Return a list of unmet password-strength requirements (empty if strong)."""
+    errors = []
+    if not any(c.isupper() for c in password):
+        errors.append("at least one uppercase letter")
+    if not any(c.islower() for c in password):
+        errors.append("at least one lowercase letter")
+    if not any(c.isdigit() for c in password):
+        errors.append("at least one digit")
+    if not any(c in "!@#$%^&*()_+-=[]{}|;:,.<>?" for c in password):
+        errors.append("at least one special character")
+    return errors
+
+
 class SignUpRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     username: str = Field(..., min_length=3, max_length=50, pattern=r"^[a-zA-Z0-9_]+$")
@@ -49,16 +63,7 @@ class SignUpRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_password_strength(self) -> SignUpRequest:
-        pw = self.password
-        errors = []
-        if not any(c.isupper() for c in pw):
-            errors.append("at least one uppercase letter")
-        if not any(c.islower() for c in pw):
-            errors.append("at least one lowercase letter")
-        if not any(c.isdigit() for c in pw):
-            errors.append("at least one digit")
-        if not any(c in "!@#$%^&*()_+-=[]{}|;:,.<>?" for c in pw):
-            errors.append("at least one special character")
+        errors = validate_password_strength(self.password)
         if errors:
             raise ValueError(f"Password must contain {', '.join(errors)}.")
         return self
@@ -78,6 +83,23 @@ class ResendVerificationRequest(BaseModel):
     email: EmailStr
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    code: str = Field(..., min_length=4, max_length=10)
+    new_password: str = Field(..., min_length=8, max_length=72)
+
+    @model_validator(mode="after")
+    def validate_new_password_strength(self) -> ResetPasswordRequest:
+        errors = validate_password_strength(self.new_password)
+        if errors:
+            raise ValueError(f"Password must contain {', '.join(errors)}.")
+        return self
+
+
 class SignUpResponse(BaseModel):
     """Returned by /signup — the code is emailed, the JWT comes after verify."""
 
@@ -93,6 +115,19 @@ class VerifiedResponse(BaseModel):
     email: str
     message: str
     resend_after_seconds: int
+
+
+class ForgotPasswordResponse(BaseModel):
+    """Returned by /forgot-password — intentionally generic (anti-enumeration)."""
+
+    message: str
+    resend_after_seconds: int
+
+
+class ResetPasswordResponse(BaseModel):
+    """Returned by /reset-password."""
+
+    message: str
 
 
 class AuthResponse(BaseModel):

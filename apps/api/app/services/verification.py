@@ -32,6 +32,8 @@ _settings = Settings()
 
 # email → code, set only when EMAIL_BACKEND=log (dev/tests).
 last_sent: dict[str, str] = {}
+# email → password-reset code, same log-mode convenience for dev/tests.
+last_reset: dict[str, str] = {}
 
 
 def _utcnow() -> datetime:
@@ -61,31 +63,32 @@ def verify_code(provided: str, stored_hash: str | None) -> bool:
     return hmac.compare_digest(hash_code(provided), stored_hash)
 
 
-def _send_via_log(email: str, code: str) -> None:
+def _send_via_log(email: str, code: str, subject: str) -> None:
     last_sent[email] = code
     _log.info(
-        "EMAIL VERIFICATION CODE for %s: %s (expires in %d min)",
+        "%s for %s: %s (expires in %d min)",
+        subject,
         email,
         code,
         _settings.verification_code_ttl_minutes,
     )
 
 
-def _send_via_smtp(email: str, code: str) -> None:
+def _send_via_smtp(email: str, code: str, subject: str) -> None:
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = "Your Unilead verification code"
+    msg["Subject"] = subject
     msg["From"] = _settings.smtp_from_email
     msg["To"] = email
     text = (
-        f"Your Unilead verification code is {code}.\n\n"
+        f"Your Unilead code is {code}.\n\n"
         f"It expires in {_settings.verification_code_ttl_minutes} minutes.\n"
-        "If you didn't create an account, you can ignore this email.\n"
+        "If you didn't request this, you can ignore this email.\n"
     )
     html = (
-        "<html><body><p>Your Unilead verification code is</p>"
+        "<html><body><p>Your Unilead code is</p>"
         f"<p style='font-size:28px;letter-spacing:6px;font-weight:bold'>{code}</p>"
         f"<p>It expires in {_settings.verification_code_ttl_minutes} minutes.</p>"
-        "<p>If you didn't create an account, you can ignore this email.</p>"
+        "<p>If you didn't request this, you can ignore this email.</p>"
         "</body></html>"
     )
     msg.attach(MIMEText(text, "plain"))
@@ -101,10 +104,24 @@ def _send_via_smtp(email: str, code: str) -> None:
 
 def send_code(email: str, code: str) -> None:
     """Deliver a verification code to ``email`` per the configured backend."""
+    subject = "Your Unilead verification code"
     if _settings.email_backend == "smtp":
-        _send_via_smtp(email, code)
+        _send_via_smtp(email, code, subject)
     else:
-        _send_via_log(email, code)
+        _send_via_log(email, code, subject)
+
+
+def send_password_reset(email: str, code: str) -> None:
+    """Deliver a password-reset code to ``email`` per the configured backend.
+
+    In ``log`` mode the code is recorded in ``last_reset`` (dev/tests only).
+    """
+    subject = "Your Unilead password-reset code"
+    if _settings.email_backend == "smtp":
+        _send_via_smtp(email, code, subject)
+    else:
+        last_reset[email] = code
+        _send_via_log(email, code, subject)
 
 
 def cooldown_remaining(sent_at: datetime | None) -> float:

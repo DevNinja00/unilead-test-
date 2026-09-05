@@ -102,7 +102,12 @@ def build_singletons(
 
 # --- Application bootstrap --------------------------------------------------
 
+import logging  # noqa: E402
+
+import app.config as config  # noqa: E402
+
 settings = Settings()
+_log = logging.getLogger("unilead.main")
 manager, orchestrator, reasoning_engine, provider = build_singletons(settings)
 
 app = FastAPI(
@@ -185,34 +190,36 @@ app.include_router(auth.router)
 # from the default student_id. The Compass routes (above) are the primary
 # entry points used by the frontend and now read student_id from the JWT.
 
-# Build a default student_manager so the legacy routes still work for tests
-# that don't have a JWT (e.g. ai_education's own tests). This gateway
-# shares state with the per-user pool only if you also push it in.
-_default_manager = StudentModelManager.create_new_student(
-    settings.student_id, course_id=settings.course_id
-)
-_default_gateway = APIGateway(
-    student_manager=_default_manager,
-    orchestrator=AICoachOrchestrator(student_manager=_default_manager, llm_provider=provider),
-    reasoning_engine=reasoning_engine,
-)
-app.state.ai_education_gateway = _default_gateway
-app.include_router(
-    build_router(_default_gateway),
-    prefix="/api/ai-education",
-    tags=["ai-education"],
-)
+# In production the legacy gateway is NOT mounted: it is unauthenticated and
+# would expose the default/demo student's data. The authenticated /api/*
+# Compass routes are the only public surface in production.
+if settings.env == "production":
+    _log.warning(
+        "Legacy /api/ai-education gateway disabled in production — "
+        "use the authenticated /api/* Compass routes."
+    )
+else:
+    # Build a default student_manager so the legacy routes still work for
+    # tests that don't have a JWT (e.g. ai_education's own tests). This
+    # gateway shares state with the per-user pool only if you also push it in.
+    _default_manager = StudentModelManager.create_new_student(
+        settings.student_id, course_id=settings.course_id
+    )
+    _default_gateway = APIGateway(
+        student_manager=_default_manager,
+        orchestrator=AICoachOrchestrator(student_manager=_default_manager, llm_provider=provider),
+        reasoning_engine=reasoning_engine,
+    )
+    app.state.ai_education_gateway = _default_gateway
+    app.include_router(
+        build_router(_default_gateway),
+        prefix="/api/ai-education",
+        tags=["ai-education"],
+    )
 
 
 # --- Startup assertion: JWT secret must be changed from default -----------
-_DEFAULT_JWT_SECRETS = {
-    "change-me-in-production-please-use-a-long-random-string",
-    "dev-secret-change-me",
-}
-if settings.jwt_secret in _DEFAULT_JWT_SECRETS:
-    import logging
-
-    _log = logging.getLogger("unilead.main")
+if settings.jwt_secret in config._DEFAULT_JWT_SECRETS:
     if settings.enforce_jwt_secret:
         _log.critical(
             "JWT_SECRET is using a default value. Set JWT_SECRET env var to a "

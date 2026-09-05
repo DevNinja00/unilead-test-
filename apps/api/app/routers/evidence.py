@@ -6,9 +6,11 @@ student-facing route, and from the URL for the instructor-facing route.
 
 import logging
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
+from sqlalchemy.orm import Session
 
 from ..auth.dependencies import get_current_instructor, get_current_student
+from ..db import crud, get_db
 from ..db.models import Student, User
 from ..schemas.instructor import EvidenceEvent
 from ..services import evidence_service
@@ -27,9 +29,24 @@ def get_my_timeline(current_student: Student = Depends(get_current_student)) -> 
 @router.get("/{student_id}/timeline", response_model=list[EvidenceEvent])
 def get_student_timeline(
     student_id: str,
+    request: Request = None,  # type: ignore[assignment]
     current_user: User = Depends(get_current_instructor),
+    db: Session = Depends(get_db),
 ) -> list[dict]:
     """Instructor view: return any student's evidence timeline by student_id."""
+    ip = request.client.host if request.client else "unknown"
+    crud.add_audit_log(
+        db,
+        actor_user_id=current_user.id,
+        actor_role=current_user.role or "instructor",
+        action="instructor_view",
+        target_type="student",
+        target_id=student_id,
+        detail="evidence timeline view",
+        ip_address=ip,
+        outcome="OK",
+    )
+    db.commit()
     _log.info(
         "evidence timeline requested by instructor=%d for student=%s", current_user.id, student_id
     )

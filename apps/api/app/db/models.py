@@ -2,7 +2,7 @@
 
 Schema overview:
 
-  User                  - auth account (email + password hash)
+  User                  - auth account (email + password hash + token version)
   Student              - one User → many Students (currently 1:1 in practice)
   CompetencySnapshot   - per-student, per-competency status + progress
   OnboardingAnswer     - one row per student (set once at onboarding)
@@ -14,6 +14,7 @@ Schema overview:
   CoachConversation    - one row per coach session (group of turns)
   CoachMessage         - one row per message in a conversation
   EvidenceEvent        - chronological feed entry (one per notable event)
+  AuditLog             - security-relevant actions (auth + instructor reads)
 """
 
 from __future__ import annotations
@@ -63,6 +64,17 @@ class User(Base):
     email_verification_code_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     email_verification_expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     email_verification_sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    # Password reset — same pattern as verification: a hashed, expiring code.
+    password_reset_code_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    password_reset_expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    password_reset_sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_password_change_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    # Session/token lifecycle: every JWT carries this number at issue time.
+    # Bumping it (e.g. after a password reset) revokes every previously
+    # issued token for the account in one step — no per-token blacklist.
+    token_version: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
 
@@ -347,3 +359,29 @@ class EvidenceEvent(Base):
     result: Mapped[str] = mapped_column(String(8), nullable=False, default="INFO")
 
     student: Mapped[Student] = relationship("Student", back_populates="evidence_events")
+
+
+class AuditLog(Base):
+    """Security-relevant action log.
+
+    Records who did what, when, and with what outcome, for auth and
+    instructor-read events. ``actor_user_id`` is nullable because events
+    like failed logins may not resolve to a known user.
+    """
+
+    __tablename__ = "audit_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime, default=_utcnow, nullable=False, index=True
+    )
+    actor_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id"), nullable=True, index=True
+    )
+    actor_role: Mapped[str] = mapped_column(String(16), nullable=False, default="student")
+    action: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    target_type: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    target_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    detail: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    ip_address: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    outcome: Mapped[str] = mapped_column(String(16), nullable=False, default="OK")

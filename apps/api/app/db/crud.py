@@ -93,6 +93,35 @@ def mark_user_verified(db: Session, *, user: models.User) -> None:
     db.flush()
 
 
+def set_user_password_reset(
+    db: Session,
+    *,
+    user: models.User,
+    code_hash: str,
+    expires_at: datetime,
+    sent_at: datetime,
+) -> None:
+    """Store a fresh (unexpired) password-reset code for a user."""
+    user.password_reset_code_hash = code_hash
+    user.password_reset_expires_at = expires_at
+    user.password_reset_sent_at = sent_at
+    db.flush()
+
+
+def clear_user_password_reset(db: Session, *, user: models.User) -> None:
+    """Invalidate any pending password-reset code (after use/expiry)."""
+    user.password_reset_code_hash = None
+    user.password_reset_expires_at = None
+    user.password_reset_sent_at = None
+    db.flush()
+
+
+def bump_token_version(db: Session, *, user: models.User) -> None:
+    """Invalidate every previously issued JWT for this user."""
+    user.token_version += 1
+    db.flush()
+
+
 # ---- Student --------------------------------------------------------------
 
 
@@ -472,3 +501,40 @@ def list_evidence_events(
     else:
         q = q.order_by(models.EvidenceEvent.id.asc())
     return q.all()
+
+
+# ---- Audit log -------------------------------------------------------------
+
+_MAX_DETAIL_LENGTH = 2000
+
+
+def add_audit_log(
+    db: Session,
+    *,
+    actor_user_id: int | None,
+    actor_role: str,
+    action: str,
+    target_type: str | None = None,
+    target_id: str | None = None,
+    detail: str = "",
+    ip_address: str | None = None,
+    outcome: str = "OK",
+) -> models.AuditLog:
+    """Record one security-relevant event in the audit trail.
+
+    Caller commits (the callers that write audit rows already own a
+    transaction). ``detail`` is truncated to keep the log bounded.
+    """
+    entry = models.AuditLog(
+        actor_user_id=actor_user_id,
+        actor_role=actor_role,
+        action=action,
+        target_type=target_type,
+        target_id=target_id,
+        detail=detail[:_MAX_DETAIL_LENGTH],
+        ip_address=ip_address,
+        outcome=outcome,
+    )
+    db.add(entry)
+    db.flush()
+    return entry

@@ -64,8 +64,14 @@ def verify_password_timing_resistant(plain: str, hashed: str | None) -> bool:
 def create_access_token(
     subject: str,
     expires_minutes: int | None = None,
+    token_version: int = 0,
 ) -> str:
-    """Issue a JWT for ``subject`` (the user id)."""
+    """Issue a JWT for ``subject`` (the user id).
+
+    ``token_version`` is the user's ``token_version`` at issue time. When it
+    changes (e.g. after a password reset) every previously issued token is
+    rejected by ``get_current_user``.
+    """
     expire = datetime.now(UTC) + timedelta(minutes=expires_minutes or _settings.jwt_expire_minutes)
     payload = {
         "sub": subject,
@@ -73,12 +79,13 @@ def create_access_token(
         "iat": datetime.now(UTC),
         "iss": "unilead-api",
         "jti": uuid.uuid4().hex,
+        "ver": token_version,
     }
     return jwt.encode(payload, _settings.jwt_secret, algorithm=_settings.jwt_algorithm)
 
 
-def decode_access_token(token: str) -> str | None:
-    """Decode a JWT and return the subject (user id as string) or None."""
+def decode_token_claims(token: str) -> dict | None:
+    """Decode + validate a JWT, returning the full claims dict or None."""
     try:
         payload = jwt.decode(
             token,
@@ -88,6 +95,14 @@ def decode_access_token(token: str) -> str | None:
         )
         if payload.get("iss") != "unilead-api":
             return None
-        return payload.get("sub")
+        return payload
     except JWTError:
         return None
+
+
+def decode_access_token(token: str) -> str | None:
+    """Decode a JWT and return the subject (user id as string) or None."""
+    payload = decode_token_claims(token)
+    if payload is None:
+        return None
+    return payload.get("sub")

@@ -41,9 +41,13 @@ from ..db import crud, get_db
 from ..db.models import User
 from ..schemas.auth import (
     AuthResponse,
+    ForgotPasswordRequest,
+    ForgotPasswordResponse,
     LoginRequest,
     MeResponse,
     ResendVerificationRequest,
+    ResetPasswordRequest,
+    ResetPasswordResponse,
     SignUpRequest,
     SignUpResponse,
     VerifiedResponse,
@@ -70,6 +74,12 @@ _SIGNUP_WINDOW_SECONDS = 3600
 _verify_attempts: dict[str, list[float]] = defaultdict(list)
 _VERIFY_MAX_ATTEMPTS = Settings().verification_max_attempts
 _VERIFY_WINDOW_SECONDS = 60
+
+# --- Simple in-memory rate limiters for forgot/reset-password (per-IP) ------
+_forgot_attempts: dict[str, list[float]] = defaultdict(list)
+_reset_attempts: dict[str, list[float]] = defaultdict(list)
+_FORGOT_WINDOW_SECONDS = 60
+_RESET_WINDOW_SECONDS = 60
 
 # --- Max IPs tracked to prevent memory exhaustion -------------------------
 _MAX_TRACKED_IPS = 10_000
@@ -136,6 +146,30 @@ def _check_verify_rate_limit(ip: str) -> None:
     _verify_attempts[ip].append(now)
 
 
+def _check_forgot_rate_limit(ip: str) -> None:
+    _sweep_expired(_forgot_attempts, _FORGOT_WINDOW_SECONDS)
+    now = time.monotonic()
+    _forgot_attempts[ip] = [t for t in _forgot_attempts[ip] if now - t < _FORGOT_WINDOW_SECONDS]
+    if len(_forgot_attempts[ip]) >= _VERIFY_MAX_ATTEMPTS:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many requests. Please try again later.",
+        )
+    _forgot_attempts[ip].append(now)
+
+
+def _check_reset_rate_limit(ip: str) -> None:
+    _sweep_expired(_reset_attempts, _RESET_WINDOW_SECONDS)
+    now = time.monotonic()
+    _reset_attempts[ip] = [t for t in _reset_attempts[ip] if now - t < _RESET_WINDOW_SECONDS]
+    if len(_reset_attempts[ip]) >= _VERIFY_MAX_ATTEMPTS:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many attempts. Please try again later.",
+        )
+    _reset_attempts[ip].append(now)
+
+
 def _sanitize_email(email: str) -> str:
     """Strip non-ASCII chars from email to prevent log injection."""
     return email.encode("ascii", "ignore").decode("ascii")
@@ -183,7 +217,10 @@ def _issue_verification_code(db: Session, user: User) -> str:
 
 
 def _auth_payload(user: User, student_id: str) -> dict:
-    token = create_access_token(subject=str(user.id))
+    token = create_access_token(
+        subject=str(user.id),
+        token_version=user.token_version,
+    )
     return {
         "access_token": token,
         "token_type": "bearer",
@@ -194,6 +231,31 @@ def _auth_payload(user: User, student_id: str) -> dict:
         "student_id": student_id,
         "role": user.role or "student",
     }
+
+
+def _audit(
+    db: Session,
+    *,
+    action: str,
+    outcome: str,
+    ip: str,
+    user: User | None = None,
+    target_type: str | None = None,
+    target_id: str | None = None,
+    detail: str = "",
+) -> None:
+    """Record one security-relevant event; commits with the current txn."""
+    crud.add_audit_log(
+        db,
+        actor_user_id=user.id if user else None,
+        actor_role=(user.role or "student") if user else "anonymous",
+        action=action,
+        target_type=target_type,
+        target_id=target_id,
+        detail=detail,
+        ip_address=ip,
+        outcome=outcome,
+    )
 
 
 # --- Routes ----------------------------------------------------------------
@@ -258,6 +320,18 @@ def signup(req: SignUpRequest, request: Request, db: Session = Depends(get_db)) 
             detail="An account with that email or username already exists.",
         ) from None
 
+    _audit(
+        db,
+        action="signup",
+        outcome="OK",
+        ip=ip,
+        user=user,
+        target_type="user",
+        target_id=str(user.id),
+        detail=f"signup for {_sanitize_email(email)}",
+    )
+    db.commit()
+
     return {
         "verification_required": True,
         "email": user.email,
@@ -317,10 +391,31 @@ def verify_email(req: VerifyEmailRequest, request: Request, db: Session = Depend
 
     students = crud.get_students_by_user_id(db, user.id)
     if not students:
+        _audit(
+            db,
+            action="verify_email",
+            outcome="FAILED",
+            ip=ip,
+            target_type="user",
+            target_id=str(user.id),
+            detail="verified but no student record",
+        )
+        db.commit()
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No student record linked to this account.",
         )
+
+    _audit(
+        db,
+        action="verify_email",
+        outcome="OK",
+        ip=ip,
+        user=user,
+        target_type="user",
+        target_id=str(user.id),
+    )
+    db.commit()
     return _auth_payload(user, students[0].student_id)
 
 
@@ -355,6 +450,16 @@ def resend_verification(
         )
 
     _issue_verification_code(db, user)
+    _audit(
+        db,
+        action="resend_verification",
+        outcome="OK",
+        ip=ip,
+        user=user,
+        target_type="user",
+        target_id=str(user.id),
+    )
+    db.commit()
     return {
         "email": user.email,
         "message": f"Verification code sent to {user.email}.",
@@ -374,6 +479,28 @@ def login(req: LoginRequest, request: Request, db: Session = Depends(get_db)) ->
     if not valid:
         _record_login_failure(ip)
         _log.warning("Failed login attempt for email=%s from ip=%s", _sanitize_email(req.email), ip)
+        if user is not None:
+            _audit(
+                db,
+                action="login",
+                outcome="FAILED",
+                ip=ip,
+                user=user,
+                target_type="user",
+                target_id=str(user.id),
+                detail=f"wrong password for {_sanitize_email(req.email)}",
+            )
+        else:
+            _audit(
+                db,
+                action="login",
+                outcome="FAILED",
+                ip=ip,
+                target_type="email",
+                target_id=_sanitize_email(req.email),
+                detail="unknown account",
+            )
+        db.commit()
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password.",
@@ -397,7 +524,171 @@ def login(req: LoginRequest, request: Request, db: Session = Depends(get_db)) ->
             detail="No student record linked to this account.",
         )
 
+    _audit(
+        db,
+        action="login",
+        outcome="OK",
+        ip=ip,
+        user=user,
+        target_type="user",
+        target_id=str(user.id),
+    )
+    db.commit()
     return _auth_payload(user, students[0].student_id)
+
+
+@router.post("/forgot-password", response_model=ForgotPasswordResponse)
+def forgot_password(
+    req: ForgotPasswordRequest, request: Request, db: Session = Depends(get_db)
+) -> dict:
+    """Request a password-reset code for an account.
+
+    The response is identical whether or not the account exists
+    (anti-enumeration); only rate limiting and a per-email cooldown can
+    reveal activity, and both are bounded.
+    """
+    ip = request.client.host if request.client else "unknown"
+    _check_forgot_rate_limit(ip)
+
+    email = req.email.lower()
+    user = crud.get_user_by_email(db, email)
+    generic = {
+        "message": (
+            "If an account exists for that email, a password-reset code "
+            "has been sent. Check your inbox."
+        ),
+        "resend_after_seconds": _RESET_WINDOW_SECONDS,
+    }
+
+    if user is None:
+        _audit(
+            db,
+            action="forgot_password",
+            outcome="OK",
+            ip=ip,
+            target_type="email",
+            target_id=_sanitize_email(email),
+            detail="no account for this email (generic response)",
+        )
+        db.commit()
+        return generic
+
+    # Per-email cooldown so an address can't be flooded with reset emails.
+    remain = verification.cooldown_remaining(user.password_reset_sent_at)
+    if remain > 0:
+        generic["resend_after_seconds"] = int(remain) + 1
+        _audit(
+            db,
+            action="forgot_password",
+            outcome="RATELIMITED",
+            ip=ip,
+            user=user,
+            target_type="user",
+            target_id=str(user.id),
+        )
+        db.commit()
+        return generic
+
+    code = verification.generate_code()
+    crud.set_user_password_reset(
+        db,
+        user=user,
+        code_hash=verification.hash_code(code),
+        expires_at=_utcnow() + timedelta(seconds=verification.code_ttl_seconds()),
+        sent_at=_utcnow(),
+    )
+    verification.send_password_reset(email, code)
+    _audit(
+        db,
+        action="forgot_password",
+        outcome="OK",
+        ip=ip,
+        user=user,
+        target_type="user",
+        target_id=str(user.id),
+    )
+    db.commit()
+    return generic
+
+
+@router.post("/reset-password", response_model=ResetPasswordResponse)
+def reset_password(
+    req: ResetPasswordRequest, request: Request, db: Session = Depends(get_db)
+) -> dict:
+    """Redeem a password-reset code and set a new password.
+
+    Success bumps ``token_version``, which revokes every previously issued
+    JWT for the account in one step. Responses are generic so the endpoint
+    can't be used to enumerate accounts.
+    """
+    ip = request.client.host if request.client else "unknown"
+    _check_reset_rate_limit(ip)
+
+    email = req.email.lower()
+    user = crud.get_user_by_email(db, email)
+    error_detail = "Invalid or expired reset code."
+    if user is None:
+        _audit(
+            db,
+            action="reset_password",
+            outcome="FAILED",
+            ip=ip,
+            target_type="email",
+            target_id=_sanitize_email(email),
+            detail="unknown account",
+        )
+        db.commit()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error_detail)
+
+    stored_hash = user.password_reset_code_hash
+    expires_at = user.password_reset_expires_at
+    if not stored_hash or expires_at is None or _utcnow() > expires_at:
+        _audit(
+            db,
+            action="reset_password",
+            outcome="FAILED",
+            ip=ip,
+            user=user,
+            target_type="user",
+            target_id=str(user.id),
+            detail="missing or expired reset code",
+        )
+        db.commit()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error_detail)
+
+    if not verification.verify_code(req.code.strip(), stored_hash):
+        _audit(
+            db,
+            action="reset_password",
+            outcome="FAILED",
+            ip=ip,
+            user=user,
+            target_type="user",
+            target_id=str(user.id),
+            detail="wrong reset code",
+        )
+        db.commit()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error_detail)
+
+    user.password_hash = hash_password(req.new_password)
+    user.last_password_change_at = _utcnow()
+    crud.clear_user_password_reset(db, user=user)
+    crud.bump_token_version(db, user=user)
+    _audit(
+        db,
+        action="reset_password",
+        outcome="OK",
+        ip=ip,
+        user=user,
+        target_type="user",
+        target_id=str(user.id),
+        detail="password reset; all previous tokens revoked",
+    )
+    db.commit()
+
+    return {
+        "message": "Your password has been reset. Log in with your new password.",
+    }
 
 
 @router.get("/me", response_model=MeResponse)
